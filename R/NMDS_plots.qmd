@@ -1,0 +1,803 @@
+---
+title: "NMDS"
+format: html
+editor: visual
+---
+
+# Packages
+
+```{r}
+library(vegan)
+library(tidyverse)
+library(ggplot2)
+library(ggvegan)
+library(ggpubr)
+library(analogue)
+```
+
+#### To fix
+
+-   I changed the ctd plots to follow depth distribution
+-   the NMDS plots are for mean of each environmental variable (salinity, temperature, and oxygen)
+-   need to change thd data again
+
+```{r}
+nmds_density<- function(mydf, event)
+{ mydf |> 
+  filter(sampling_event %in% event) |>
+  mutate(
+    net_area_m2 = as.numeric(net_area_m2),
+    sampling_depth = as.numeric(sampling_depth)
+    ) |> 
+  mutate(
+    filtered_seawater = net_area_m2 * sampling_depth,
+  #  parasitized_abundance = parasitized_chaetognaths/filtered_seawater,
+    chromista_sp_indet_p_elegans = as.numeric(chromista_sp_indet_p_elegans)/filtered_seawater,
+    hysterothylacium_aduncum = as.numeric(hysterothylacium_aduncum)/filtered_seawater,
+    gregarinasina_sp_indet = as.numeric(gregarinasina_sp_indet)/filtered_seawater,
+    ciliophora_sp_indet = as.numeric(ciliophora_sp_indet)/filtered_seawater,
+    didymozoid_sp_indet = as.numeric(didymozoid_sp_indet)/filtered_seawater,
+    diphyllobothrium_sp = as.numeric(diphyllobothrium_sp)/filtered_seawater,
+    station = factor(station) ) |> 
+  mutate(
+    filtered_seawater = round(filtered_seawater, digits = 1),
+  #  parasitized_abundance = round(parasitized_abundance * 100, digits = 1),
+    chromista_sp_indet_p_elegans = round(chromista_sp_indet_p_elegans * 100, digits = 1),
+    hysterothylacium_aduncum = round(hysterothylacium_aduncum * 100, digits = 1),
+    gregarinasina_sp_indet = round(gregarinasina_sp_indet * 100, digits = 1),
+    ciliophora_sp_indet = round(ciliophora_sp_indet * 100, digits = 1),
+    didymozoid_sp_indet = round(didymozoid_sp_indet * 100, digits = 1),
+    diphyllobothrium_sp = round(diphyllobothrium_sp * 100, digits = 1)
+  )|> 
+   pivot_longer(cols = c(hysterothylacium_aduncum, gregarinasina_sp_indet, ciliophora_sp_indet, didymozoid_sp_indet, chromista_sp_indet_p_elegans, diphyllobothrium_sp),
+               names_to = "parasite_species",
+               values_to = "density"
+               ) |> 
+  mutate(parasite_species = case_when(
+                        #str_detect(count_names, "^parasitized_abundance") ~ "Parasitized chaetognaths",
+                        str_detect(parasite_species, "^hysterothylacium_aduncum") ~ "Hysterothylacium aduncum",
+                        str_detect(parasite_species, "^gregarinasina_sp_indet") ~ "Gregarine-like parasites",
+                        str_detect(parasite_species, "^ciliophora_sp_indet") ~ "Cilates",
+                        str_detect(parasite_species, "^didymozoid_sp_indet") ~ "Didymozoidae sp. indet",
+                        str_detect(parasite_species, "^chromista_sp_indet_p_elegans") ~ "Chromista sp. indet",
+                        str_detect(parasite_species, "^diphyllobothrium_sp") ~ "Diphyllobothrium sp.",
+                        TRUE ~ parasite_species)) |> 
+    mutate(
+      sampling_date = parse_date(sampling_date, format = "%B %Y"),
+      month = factor(format(sampling_date, "%b"),
+                    levels = c("Jan", "Feb", "Mar", "Apr", "May", "Jun",
+                             "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"),
+                    ordered = TRUE),
+      year = factor(format(sampling_date, "%Y"),
+                    levels = c("2023", "2024"),
+                    ordered = TRUE)
+      ) |> 
+    mutate(parasites_species = factor(parasite_species,
+                     levels=c( "Gregarine-like parasites", "Hysterothylacium aduncum", "Cilates", "Didymozoidae sp. indet", "Diphyllobothrium sp.", "Chromista sp. indet"),
+                     ordered =TRUE)) |> 
+#drop_na(density) |> 
+    replace_na(list(density = 0)) |> 
+    select(parasite_species, density, year, month, sampling) #|> 
+   # filter(month != "May")
+  
+}
+
+nmds_density4<- nmds_density(mydf = dynamics, event = "4")
+nmds_density4  
+
+
+# mutate(
+  #    sampling_date = parse_date(sampling_date, format = "%B %Y"),
+   #   sampling_date = factor(format(sampling_date, "%B %Y"))
+  #  ) |> 
+
+```
+
+```{r}
+nmds_ctd <- combined_24_mean |> 
+    rename(station = "location", sampling = "sampling_trip") |>
+ mutate(month = case_when(
+                        str_detect(month, "January") ~ "Jan",
+                        str_detect(month, "February") ~ "Feb",
+                        str_detect(month, "March") ~ "Mar",
+                        str_detect(month, "April") ~ "Apr",
+                        str_detect(month, "May") ~ "May",
+                        str_detect(month, "June") ~ "Jun",
+                        str_detect(month, "July") ~ "Jul",
+                        str_detect(month, "August") ~ "Aug",
+                        str_detect(month, "September") ~ "Sep",
+                        str_detect(month, "October") ~ "Oct",
+                        str_detect(month, "November") ~ "Nov",
+                        str_detect(month, "December") ~ "Dec",
+                        TRUE ~ month)) |> 
+  mutate(mean_salinity = as.numeric(mean_salinity, na.rm = TRUE),
+         mean_oxygen = as.numeric(mean_oxygen, na.rm = TRUE),
+         mean_temperature = as.numeric(mean_temperature, na.rm = TRUE)) |> 
+  select(mean_temperature, station, year, month, mean_salinity, mean_oxygen) #|> 
+  #filter(month != "May")
+nmds_ctd
+```
+
+```{r}
+# Joining the ctd data and density data
+nmds_matrix <- left_join(nmds_density4, nmds_ctd)
+
+# transform to right matrix format
+matrix <- nmds_matrix |> 
+  filter(station != "Fanafjord") |> 
+ # select(parasite_species, density, sampling) |> 
+  #arrange(by = month, station) |> 
+  #group_by(month, station) |> 
+pivot_wider(names_from = parasite_species, values_from = density, values_fill = 0, values_fn = sum) |> 
+  drop_na() |> 
+  rename(Hys = "Hysterothylacium aduncum", Greg = "Gregarine-like parasites", Cil = "Cilates", Did =  "Didymozoidae sp. indet", Chro = "Chromista sp. indet", Diph = "Diphyllobothrium sp.", temp = "mean_temperature", oxy = "mean_oxygen", sal = "mean_salinity")
+
+# |> 
+#  select("Hysterothylacium aduncum","Gregarine-like parasites", "Cilates","Didymozoidae sp. indet", "Chromista sp. indet",
+     #    "Diphyllobothrium sp.")
+ 
+# Species matrix
+species_matrix<- matrix |> 
+  select("Hys","Greg", "Cil","Did", "Chro",
+         "Diph")# |> 
+  #filter(!row_number() %in% c(30))
+#|> 
+  #as.matrix()
+  
+# Environmental data
+env_data <- matrix |> 
+  select(month, year, station, temp, sal, oxy)
+ 
+
+
+```
+
+```{r}
+density_total_vct <- rowSums(species_matrix)
+
+density_total <- species_matrix |> 
+  mutate(density = density_total_vct)
+
+mva_species_tf <- species_matrix |> 
+    tran(method = "rootroot")
+```
+
+```{r}
+
+# Perform NMDS analysis
+set.seed(123)  # For reproducibility
+nmds <- metaMDS(mva_species_tf,  # mva_species_tf
+                distance = "bray",  # Bray-Curtis dissimilarity
+                k = 2,             # 3 dimensions as specified
+                trymax = 20)       # 20 runs for stability
+
+# Check stress values
+stressplot(nmds)
+
+# Create environmental data frame
+
+
+# Run envfit analysis
+env_fit <- envfit(nmds, env_data, 
+                  permutations = 999)
+
+dim(nmds)  # Should show number of samples and 2 columns (NMDS1, NMDS2)
+dim(env_data)
+
+vector_coords <- as.data.frame(scores(env_fit, "vectors"))
+vector_coords$variable <- rownames(vector_coords)
+
+# scale arrows
+arrow_multiplier <- 1.5
+vector_coords <- transform(vector_coords,
+                              NMDS1 = NMDS1 * arrow_multiplier,
+                            NMDS2 = NMDS2 * arrow_multiplier)
+
+# Calculate species correlations with ordination axes
+species_envfit <- envfit(nmds, mva_species_tf,
+                        permutations = 999)
+
+# Get species coordinates
+species_coords <- as.data.frame(scores(species_envfit, "vectors"))
+species_coords$variable <- rownames(species_coords)
+
+# Scale the arrows
+arrow_multiplier <- 1.5
+species_coords <- transform(species_coords,
+                          NMDS1 = NMDS1 * arrow_multiplier,
+                          NMDS2 = NMDS2 * arrow_multiplier)
+
+# Categorical envfit scores (location, month, year)
+
+factor_coords <- as.data.frame(scores(env_fit, "factors"))
+factor_coords$variable <- rownames(factor_coords)
+
+nmds_df <- as.data.frame(scores(nmds))
+cool <- cbind(env_data, nmds_df)
+
+
+
+
+```
+
+```{r}
+
+cool$month <- factor(cool$month, levels = c("Jan", "Feb", "Mar", "Apr", 
+                                           "May", "Jun", "Jul", "Aug", 
+                                           "Sep", "Oct", "Nov", "Dec"))
+# Add vectors to the plot
+nmds_plot4<- ggplot(cool, aes(x = sites.NMDS1, y = sites.NMDS2)) +
+geom_point(aes(color = year, shape = year), size = 4, alpha = 0.7, stroke = 0.5) +
+
+  #geom_label_repel(aes(label = month)) +
+  geom_text(aes(label = month, colour = year), 
+           hjust = -0.4,     # Horizontal adjustment (0 = left-aligned)
+           vjust = 0,
+           size = 3) +
+ # geom_abline(intercept = 0, slope = 0, linetype = "dashed") +
+  #geom_vline(aes(intercept = 0), linetype = "dashed") +
+  geom_segment(data = vector_coords,
+              aes(x = 0, y = 0, xend = NMDS1, yend = NMDS2),
+              arrow = arrow(length = unit(0.3, "cm")),
+              color = "blue",
+              size = 0.8, 
+              alpha = 0.5) +
+  geom_text(data = vector_coords,
+            aes(x = NMDS1, y = NMDS2, label = variable),
+            vjust = -0.5, 
+            color = "blue") +
+  geom_segment(data = species_coords,
+              aes(x = 0, y = 0, xend = NMDS1, yend = NMDS2),
+              arrow = arrow(length = unit(0.3, "cm")),
+              size = 0.8,
+              alpha = 0.5,
+              color = "cyan4",
+              alpha = 0.5) +
+  geom_text(data = species_coords,
+            aes(x = NMDS1, y = NMDS2, label = variable),
+            vjust = -0.5) +
+ scale_color_manual(values = c("deeppink4", "lightpink3")) +
+    theme_minimal() +
+  coord_fixed() +
+  labs(x = "NMDS1", y = "NMDS2")+
+  annotate("label", x = -0.4, y = -1,
+           label = "Stress: 0.06",
+           color = "black",
+           size = 3)
+nmds_plot4
+
+```
+
+stress values is: 0.0306413, stress type 1, weak ties
+
+```{r}
+ggsave(here("output", "nmds_plot4.png"), plot = nmds_plot4, width = 170, height = 160, units = "mm", scale = 1.2)
+
+```
+
+## Sampling events 1-3
+
+```{r}
+# Calculate the mean for each sampling event
+
+Arctic_ctd_mean<- function(mydf, location_info, para_info, station_info)
+{   mydf|> 
+  summarise(
+  mean_temperature = mean(temperature, na.rm = TRUE),
+    ci_lower_temp = mean(temperature, na.rm = TRUE) - 
+      qt(0.975, df = n() - 1) * sd(temperature, na.rm = TRUE) / sqrt(n()),
+    ci_upper_temp = mean(temperature, na.rm = TRUE) +
+      qt(0.975, df = n() - 1) * sd(temperature, na.rm = TRUE) / sqrt(n()),
+  mean_oxygen = mean(oxygen, na.rm = TRUE),
+    ci_lower_oxy = mean(oxygen, na.rm = TRUE) - 
+      qt(0.975, df = n() - 1) * sd(oxygen, na.rm = TRUE) / sqrt(n()),
+    ci_upper_oxy = mean(oxygen, na.rm = TRUE) +
+      qt(0.975, df = n() - 1) * sd(oxygen, na.rm = TRUE) / sqrt(n()),
+  mean_salinity = mean(salinity, na.rm = TRUE),
+    ci_lower_sal = mean(salinity, na.rm = TRUE) - 
+      qt(0.975, df = n() - 1) * sd(salinity, na.rm = TRUE) / sqrt(n()),
+    ci_upper_sal = mean(salinity, na.rm = TRUE) +
+      qt(0.975, df = n() - 1) * sd(salinity, na.rm = TRUE) / sqrt(n())
+  ) |> 
+  mutate(location = location_info, parasitized = para_info, station = station_info, year = "2022", sampling_event = "1") |> 
+    group_by(location, parasitized)
+}
+
+Arctic_ctd1_mean<- rbind(Arctic_ctd_mean(mydf = ctd_sta1, location_info = "Krossfjorden", para_info = "Yes", station_info = "1"), 
+         Arctic_ctd_mean(mydf = ctd_sta2, location_info = "Krossfjorden", para_info = "Yes", station_info = "2"), 
+         Arctic_ctd_mean(mydf = ctd_sta3, location_info = "Kongsfjorden", para_info = "Yes", station_info = "3"), 
+         Arctic_ctd_mean(mydf = ctd_sta7, location_info = "Billefjorden", para_info = "Yes", station_info = "7"),
+         Arctic_ctd_mean(mydf = ctd_sta8, location_info = "Billefjorden", para_info = "Yes", station_info = "8"),
+         Arctic_ctd_mean(mydf = ctd_sta9, location_info = "Billefjorden", para_info = "Yes", station_info = "9"),
+         Arctic_ctd_mean(mydf = ctd_sta10, location_info = "Van Mijenfjorden", para_info = "No", station_info = "10"),
+         Arctic_ctd_mean(mydf = ctd_sta11, location_info = "Van Mijenfjorden", para_info = "Yes", station_info = "11"),
+         Arctic_ctd_mean(mydf = ctd_sta12, location_info = "Van Mijenfjorden", para_info = "Yes", station_info = "12"),
+         Arctic_ctd_mean(mydf = ctd_sta14, location_info = "Hornsund", para_info = "Yes", station_info = "14"),
+         Arctic_ctd_mean(mydf = ctd_sta15, location_info = "Hornsund", para_info = "Yes", station_info = "15"),
+         Arctic_ctd_mean(mydf = ctd_sta18, location_info = "Barents Sea", para_info = "No", station_info = "18"),
+         Arctic_ctd_mean(mydf = ctd_sta19, location_info = "Barents Sea", para_info = "Yes", station_info = "19"),
+         Arctic_ctd_mean(mydf = ctd_sta21_1, location_info = "Porsangerfjorden", para_info = "Yes", station_info = "21"),
+         Arctic_ctd_mean(mydf = ctd_sta23, location_info = "Porsangerfjorden", para_info = "No", station_info = "23"),
+         Arctic_ctd_mean(mydf = ctd_sta24, location_info = "Porsangerfjorden", para_info = "No", station_info = "24"),
+         Arctic_ctd_mean(mydf = ctd_sta26, location_info = "Porsangerfjorden", para_info = "No", station_info = "26"),
+         Arctic_ctd_mean(mydf = ctd_sta27, location_info = "Porsangerfjorden", para_info = "Yes", station_info = "27"),
+         Arctic_ctd_mean(mydf = ctd_sta29_2, location_info = "Bleik Canyon", para_info = "No", station_info = "29"),
+         Arctic_ctd_mean(mydf = ctd_sta30_2, location_info = "Bleik Canyon", para_info = "No", station_info = "30"),
+         Arctic_ctd_mean(mydf = ctd_sta31, location_info = "Bleik Canyon", para_info = "Yes", station_info = "31")
+)
+
+```
+
+```{r}
+arctic_ctd1n<- Arctic_ctd1_mean |> 
+  mutate(station = as.character(station))
+
+arctic_ctd2n<- Arctic_ctd2  |> 
+    mutate(station = as.character(station))
+
+arctic_ctd3n<- Arctic_ctd3  |> 
+    mutate(station = as.character(station))
+
+ctdarc<- rbind(arctic_ctd1n, arctic_ctd2n, arctic_ctd3n)
+```
+
+```{r}
+nmds_dens2<- function(mydf, event)
+{ mydf |> 
+  filter(sampling_event %in% event) |>
+  mutate(
+    net_area_m2 = as.numeric(net_area_m2),
+    sampling_depth = as.numeric(sampling_depth)
+    ) |> 
+  mutate(
+    filtered_seawater = net_area_m2 * sampling_depth,
+    derogenes_varicus = as.numeric(derogenes_varicus)/filtered_seawater,
+    hysterothylacium_aduncum = as.numeric(hysterothylacium_aduncum)/filtered_seawater,
+    gregarinasina_sp_indet = as.numeric(gregarinasina_sp_indet)/filtered_seawater,
+    hemiurus_levinseni = as.numeric(hemiurus_levinseni)/filtered_seawater,
+    didymozoid_sp_indet = as.numeric(didymozoid_sp_indet)/filtered_seawater,
+    diphyllobothrium_sp = as.numeric(diphyllobothrium_sp)/filtered_seawater,
+    lecithaster_gibbosus = as.numeric(lecithaster_gibbosus)/filtered_seawater,
+    digenea_sp = as.numeric(digenea_sp)/filtered_seawater,
+    isopoda_sp_indet = as.numeric(isopoda_sp_indet)/filtered_seawater,
+    station = factor(station) ) |> 
+  mutate(
+    filtered_seawater = round(filtered_seawater, digits = 1),
+    derogenes_varicus = round(derogenes_varicus * 100, digits = 1),
+    hysterothylacium_aduncum = round(hysterothylacium_aduncum * 100, digits = 1),
+    gregarinasina_sp_indet = round(gregarinasina_sp_indet * 100, digits = 1),
+    hemiurus_levinseni = round(hemiurus_levinseni * 100, digits = 1),
+    didymozoid_sp_indet = round(didymozoid_sp_indet * 100, digits = 1),
+    diphyllobothrium_sp = round(diphyllobothrium_sp * 100, digits = 1),
+    lecithaster_gibbosus = round(lecithaster_gibbosus * 100, digits = 1),
+    digenea_sp = round(digenea_sp * 100, digits = 1),
+    isopoda_sp_indet = round(isopoda_sp_indet * 100, digits = 1)
+  )|> 
+   pivot_longer(cols = c(hysterothylacium_aduncum, gregarinasina_sp_indet, hemiurus_levinseni, didymozoid_sp_indet, derogenes_varicus, diphyllobothrium_sp, lecithaster_gibbosus, isopoda_sp_indet, digenea_sp),
+               names_to = "parasite_species",
+               values_to = "density"
+               ) |> 
+  mutate(parasite_species = case_when(
+                        str_detect(parasite_species, "^hysterothylacium_aduncum") ~ "Hysterothylacium aduncum",
+                        str_detect(parasite_species, "^gregarinasina_sp_indet") ~ "Gregarine-like parasites",
+                        str_detect(parasite_species, "^didymozoid_sp_indet") ~ "Didymozoidae sp. indet",
+                        str_detect(parasite_species, "^derogenes_varicus") ~ "Derogenes varicus",
+                        str_detect(parasite_species, "^diphyllobothrium_sp") ~ "Diphyllobothrium spp.",
+                        str_detect(parasite_species, "^diphyllobothrium_lanceolatum") ~ "Diphyllobothrium spp.",
+                        str_detect(parasite_species, "^hemiurus_levinseni") ~ "Hemiurus levinseni",
+                        str_detect(parasite_species, "^lecithaster_gibbosus") ~ "Lecithaster gibbosus",
+                        str_detect(parasite_species, "^digenea_sp") ~ "Digenea sp.",
+                        str_detect(parasite_species, "^isopoda_sp_indet") ~ "Isopoda sp.",
+                        TRUE ~ parasite_species)) |>
+       mutate(station = case_when(
+    str_detect(station, "^Billefjord") ~ "Billefjorden",
+    str_detect(station, "^Bleik canyon") ~ "Bleik Canyon",
+    str_detect(station, "^Kongsfjord") ~ "Kongsfjorden",
+    str_detect(station, "^Krossfjord") ~ "Krossfjorden",
+    str_detect(station, "^Porsangerfjord") ~ "Porsangerfjorden",
+    str_detect(station, "^Van Mijenfjord") ~ "Van Mijenfjorden",
+    str_detect(station, "^Hornsund") ~ "Hornsund",
+    str_detect(station, "^west of Prins Karls Forland") ~ "Prins Karls Forland",
+    str_detect(station, "^north of Nordaustlandet") ~ "Nordaustlandet",
+    str_detect(station, "^northeast of Nordaustlandet") ~ "Nordaustlandet",
+    str_detect(station, "^north of Spitsbergen") ~ "North of Spitsbergen",
+    str_detect(station, "^mouth of Hinlopenstretet") ~ "Hinlopenstretet",
+    str_detect(station, "^north of Hinlopenstretet") ~ "Hinlopenstretet",
+    str_detect(station, "^west of Danskøya") ~ "Danskøya",
+    str_detect(station, "^Wijdfjord") ~ "Wijdfjorden",
+    str_detect(station, "^Rijpfjord") ~ "Rijpfjorden",
+    str_detect(station, "^north of Kvitøya") ~ "Kvitøya",
+    str_detect(station, "^northeast of Kvitøya") ~ "Kvitøya",
+    TRUE ~ station
+    ) ) |>
+    replace_na(list(density = 0)) |> 
+    select(station, parasite_species, density, sampling_event, cruise)
+   # filter(month != "May")
+  
+}
+
+nmds_densarc2<- nmds_dens2(mydf = dynamics, event = c("2"))
+nmds_densarc2
+
+nmds_dens1<- function(mydf, event) #or for multiple ones nmds_dens13
+{ mydf |> 
+  filter(sampling_event %in% event) |>
+  mutate(
+    filtered_volume_1_2 = as.numeric(filtered_volume_1_2),
+    cruise = as.character(cruise),
+    derogenes_varicus = as.numeric(derogenes_varicus)/filtered_volume_1_2,
+    hysterothylacium_aduncum = as.numeric(hysterothylacium_aduncum)/filtered_volume_1_2,
+    gregarinasina_sp_indet = as.numeric(gregarinasina_sp_indet)/filtered_volume_1_2,
+    hemiurus_levinseni = as.numeric(hemiurus_levinseni)/filtered_volume_1_2,
+    didymozoid_sp_indet = as.numeric(didymozoid_sp_indet)/filtered_volume_1_2,
+    diphyllobothrium_sp = as.numeric(diphyllobothrium_sp)/filtered_volume_1_2,
+    lecithaster_gibbosus = as.numeric(lecithaster_gibbosus)/filtered_volume_1_2,
+    isopoda_sp_indet = as.numeric(isopoda_sp_indet)/filtered_volume_1_2,
+    digenea_sp = as.numeric(digenea_sp)/filtered_volume_1_2,
+    station = factor(station)) |> 
+  mutate(
+    derogenes_varicus = round(derogenes_varicus * 100, digits = 1),
+    hysterothylacium_aduncum = round(hysterothylacium_aduncum * 100, digits = 1),
+    gregarinasina_sp_indet = round(gregarinasina_sp_indet * 100, digits = 1),
+    hemiurus_levinseni = round(hemiurus_levinseni * 100, digits = 1),
+    didymozoid_sp_indet = round(didymozoid_sp_indet * 100, digits = 1),
+    diphyllobothrium_sp = round(diphyllobothrium_sp * 100, digits = 1),
+    lecithaster_gibbosus = round(lecithaster_gibbosus * 100, digits = 3),
+    isopoda_sp_indet = round(isopoda_sp_indet * 100, digits = 3),
+    digenea_sp = round(digenea_sp * 100, digits = 3)
+  
+  )|> 
+   pivot_longer(cols = c(hysterothylacium_aduncum, gregarinasina_sp_indet, hemiurus_levinseni, didymozoid_sp_indet, derogenes_varicus, diphyllobothrium_sp, lecithaster_gibbosus, isopoda_sp_indet, digenea_sp),
+               names_to = "parasite_species",
+               values_to = "density"
+               ) |> 
+  mutate(parasite_species = case_when(
+                        str_detect(parasite_species, "^hysterothylacium_aduncum") ~ "Hysterothylacium aduncum",
+                        str_detect(parasite_species, "^gregarinasina_sp_indet") ~ "Gregarine-like parasites",
+                        str_detect(parasite_species, "^didymozoid_sp_indet") ~ "Didymozoidae sp. indet",
+                        str_detect(parasite_species, "^derogenes_varicus") ~ "Derogenes varicus",
+                        str_detect(parasite_species, "^diphyllobothrium_sp") ~ "Diphyllobothrium spp.",
+                        str_detect(parasite_species, "^diphyllobothrium_lanceolatum") ~ "Diphyllobothrium spp.",
+                        str_detect(parasite_species, "^hemiurus_levinseni") ~ "Hemiurus levinseni",
+                        str_detect(parasite_species, "^lecithaster_gibbosus") ~ "Lecithaster gibbosus",
+                        str_detect(parasite_species, "^digenea_sp") ~ "Digenea sp.",
+                        str_detect(parasite_species, "^isopoda_sp_indet") ~ "Isopoda sp.",
+                        TRUE ~ parasite_species)) |> 
+  mutate(cruise = case_when(
+      str_detect(cruise, "UNIS 2024") & station == "Wijdfjord" ~ "1132",
+      str_detect(cruise, "UNIS 2024") & station == "Rijpfjord" ~ "1145",
+       str_detect(cruise, "UNIS 2024") & station == "Kongsfjord" ~ "1197",
+      TRUE ~ cruise  ) ) |> 
+    mutate(station = case_when(
+    str_detect(station, "^Billefjord") ~ "Billefjorden",
+    str_detect(station, "^Bleik canyon") ~ "Bleik Canyon",
+    str_detect(station, "^Kongsfjord") ~ "Kongsfjorden",
+    str_detect(station, "^Krossfjord") ~ "Krossfjorden",
+    str_detect(station, "^Porsangerfjord") ~ "Porsangerfjorden",
+    str_detect(station, "^Van Mijenfjord") ~ "Van Mijenfjorden",
+    str_detect(station, "^Hornsund") ~ "Hornsund",
+    str_detect(station, "^west of Prins Karls Forland") ~ "Prins Karls Forland",
+    str_detect(station, "^north of Nordaustlandet") ~ "Nordaustlandet",
+    str_detect(station, "^northeast of Nordaustlandet") ~ "Nordaustlandet",
+    str_detect(station, "^north of Spitsbergen") ~ "North of Spitsbergen",
+    str_detect(station, "^mouth of Hinlopenstretet") ~ "Hinlopenstretet",
+    str_detect(station, "^north of Hinlopenstretet") ~ "Hinlopenstretet",
+    str_detect(station, "^west of Danskøya") ~ "Danskøya",
+    str_detect(station, "^Wijdfjord") ~ "Wijdfjorden",
+    str_detect(station, "^Rijpfjord") ~ "Rijpfjorden",
+    str_detect(station, "^north of Kvitøya") ~ "Kvitøya",
+    str_detect(station, "^northeast of Kvitøya") ~ "Kvitøya",
+    TRUE ~ station
+    ) ) |> 
+    replace_na(list(density = 0)) |>
+      mutate(cruise = case_when(
+                        str_detect(cruise, "^CP1-") ~ "1",
+                        str_detect(cruise, "^CP2-") ~ "2",
+                        str_detect(cruise, "^CP3-") ~ "3",
+                        str_detect(cruise, "^CP7") ~ "7",
+                        str_detect(cruise, "^CP8") ~ "8",
+                        str_detect(cruise, "^CP9") ~ "9",
+                        str_detect(cruise, "^CP10") ~ "10",
+                        str_detect(cruise, "^CP11") ~ "11",
+                        str_detect(cruise, "^CP12") ~ "12",
+                        str_detect(cruise, "^CP14") ~ "14",
+                        str_detect(cruise, "^CP15") ~ "15",
+                        str_detect(cruise, "^CP18") ~ "18",
+                        str_detect(cruise, "^CP19") ~ "19",
+                        str_detect(cruise, "^CP21") ~ "21",
+                        str_detect(cruise, "^CP23") ~ "23",
+                        str_detect(cruise, "^CP24") ~ "24",
+                        str_detect(cruise, "^CP26") ~ "26",
+                        str_detect(cruise, "^CP27") ~ "27",
+                        str_detect(cruise, "^CP29") ~ "29",
+                        str_detect(cruise, "^CP30") ~ "30",
+                        str_detect(cruise, "^CP31") ~ "31",
+                        TRUE ~ cruise)) |> 
+    select(parasite_species, density, sampling_event, station, cruise)
+   
+}
+
+#separated by sampling event
+nmds_densarc1<- nmds_dens1(mydf = dynamics, event = c("1"))
+nmds_densarc1
+
+
+#combined with all sampling events
+
+#nmds_densarc13<- nmds_dens13(mydf = dynamics, event = c("1", "3"))
+#nmds_densarc13
+
+
+#nmds_densarc_all<- rbind(nmds_densarc13, nmds_densarc2)
+
+
+
+```
+
+```{r}
+# for seperate sampling events
+
+nmds_ctd_1 <- arctic_ctd1n |> 
+   #rename( location = "station", sampling_event = "sampling") |>
+   mutate(sal = as.numeric(mean_salinity, na.rm = TRUE),
+         oxy = as.numeric(mean_oxygen, na.rm = TRUE),
+         temp = as.numeric(mean_temperature, na.rm = TRUE)) |> 
+  select(temp, location, sal, oxy, sampling_event, station) |> 
+  rename(cruise = "station", station = "location") |> 
+  filter(parasitized == "Yes")
+  #filter(month != "May")
+nmds_ctd_1
+
+# For combined sampling events
+nmds_ctdarc <- ctdarc |> 
+   #rename( location = "station", sampling_event = "sampling") |>
+   mutate(sal = as.numeric(salinity, na.rm = TRUE),
+         oxy = as.numeric(oxygen, na.rm = TRUE),
+         temp = as.numeric(temperature, na.rm = TRUE)) |> 
+  select(temp, location, sal, oxy, sampling_event, station) |> 
+  rename(cruise = "station", station = "location") |> 
+  filter(parasitized == "Yes")
+  #filter(month != "May")
+nmds_ctdarc
+```
+
+```{r}
+# Joining the ctd data and density data
+nmds_arc_matrix <-right_join(nmds_densarc1, nmds_ctd_1)     #nmds_densarc_all, nmds_ctdarc                            
+
+
+# transform to right matrix format
+matrixarc <- nmds_arc_matrix |>  
+   # select(parasite_species, density, sampling) |> 
+  #arrange(by = month, station) |> 
+  #group_by(month, station) |> 
+pivot_wider(names_from = parasite_species, values_from = density, values_fill = 0, values_fn = sum) |> 
+  drop_na() |> 
+  rename(Hys = "Hysterothylacium aduncum", Greg = "Gregarine-like parasites", Der = "Derogenes varicus", Did =  "Didymozoidae sp. indet", Hem = "Hemiurus levinseni", Diph = "Diphyllobothrium spp.", Lec = "Lecithaster gibbosus", Iso = "Isopoda sp.", Dig = "Digenea sp.")
+
+# |> 
+#  select("Hysterothylacium aduncum","Gregarine-like parasites", "Cilates","Didymozoidae sp. indet", "Chromista sp. indet",
+     #    "Diphyllobothrium sp.")
+ 
+# Species matrix
+species_matrix_arc<- matrixarc |> 
+  select("Hys","Greg", "Hem","Did", "Der", "Lec", "Diph", "Iso", "Dig")# |> 
+  #filter(!row_number() %in% c(30))
+#|> 
+  #as.matrix()
+  
+# Environmental data
+env_data_arc <- matrixarc |> 
+  select(sampling_event, station, cruise, temp, sal, oxy)
+ 
+
+```
+
+```{r}
+density_total_arc_vct <- rowSums(species_matrix_arc)
+
+density_total_arc <- species_matrix_arc |> 
+  mutate(density = density_total_arc_vct)
+
+mva_species_arc <- species_matrix_arc |> 
+    tran(method = "rootroot")
+```
+
+```{r}
+# Perform NMDS analysis
+set.seed(123)  # For reproducibility
+nmds_arc <- metaMDS(mva_species_arc, 
+                distance = "bray",  # Bray-Curtis dissimilarity
+                k = 2,             # 3 dimensions as specified
+                trymax = 20)       # 20 runs for stability
+
+# Check stress values
+stressplot(nmds_arc)
+
+# Create environmental data frame
+
+
+# Run envfit analysis
+env_fit_arc <- envfit(nmds_arc, env_data_arc, 
+                  permutations = 999)
+
+dim(nmds_arc)  # Should show number of samples and 2 columns (NMDS1, NMDS2)
+dim(env_data_arc)
+
+vector_coords_arc <- as.data.frame(scores(env_fit_arc, "vectors"))
+vector_coords_arc$variable <- rownames(vector_coords_arc)
+
+# scale arrows
+arrow_multiplier <- 1.5
+vector_coords_arc <- transform(vector_coords_arc,
+                              NMDS1 = NMDS1 * arrow_multiplier,
+                            NMDS2 = NMDS2 * arrow_multiplier)
+
+# Calculate species correlations with ordination axes
+species_envfit_arc <- envfit(nmds_arc, mva_species_arc,
+                        permutations = 999)
+
+# Get species coordinates
+species_coords_arc <- as.data.frame(scores(species_envfit_arc, "vectors"))
+species_coords_arc$variable <- rownames(species_coords_arc)
+
+# Scale the arrows
+arrow_multiplier <- 1.5
+species_coords_arc <- transform(species_coords_arc,
+                          NMDS1 = NMDS1 * arrow_multiplier,
+                          NMDS2 = NMDS2 * arrow_multiplier)
+
+# Categorical envfit scores (location, month, year)
+
+factor_coords_arc <- as.data.frame(scores(env_fit_arc, "factors"))
+factor_coords_arc$variable <- rownames(factor_coords_arc)
+
+
+nmds_df_arc <- as.data.frame(scores(nmds_arc))
+
+arctic_cool <- cbind(env_data_arc, nmds_df_arc)
+
+```
+
+Stress very low... 0.001719302 --\> because of zero inflation
+
+```{r}
+#arctic_cool$month <- factor(arctic_cool$month, levels = c("Jan", "Feb", "Mar", "Apr", 
+ #                                          "May", "Jun", "Jul", "Aug", 
+#                                           "Sep", "Oct", "Nov", "Dec"))
+# Add vectors to the plot
+nmds_plot_arc<- ggplot(arctic_cool, aes(x = sites.NMDS1, y = sites.NMDS2)) +
+geom_point(aes(color = station, shape = year), size = 4, alpha = 0.7, stroke = 0.5) +
+
+  #geom_label_repel(aes(label = month)) +
+  geom_text(aes(label = cruise, colour = station), 
+           hjust = 0,     # Horizontal adjustment (0 = left-aligned)
+           vjust = -0.5,
+           size = 3) +
+ # geom_abline(intercept = 0, slope = 0, linetype = "dashed") +
+  #geom_vline(aes(intercept = 0), linetype = "dashed") +
+  geom_segment(data = vector_coords_arc,
+              aes(x = 0, y = 0, xend = NMDS1, yend = NMDS2),
+              arrow = arrow(length = unit(0.3, "cm"))) +
+  geom_text(data = vector_coords_arc,
+            aes(x = NMDS1, y = NMDS2, label = variable),
+            vjust = -0.5) +
+  geom_segment(data = species_coords_arc,
+              aes(x = 0, y = 0, xend = NMDS1, yend = NMDS2),
+              arrow = arrow(length = unit(0.3, "cm"))) +
+  geom_text(data = species_coords_arc,
+            aes(x = NMDS1, y = NMDS2, label = variable),
+            vjust = -0.5) +
+ # scale_color_manual(values = c("darkblue", "forestgreen")) +
+    theme_minimal() +
+  coord_fixed() +
+  labs(x = "NMDS1", y = "NMDS2")+
+  annotate("label", x = -0.4, y = -1,
+           label = "Stress: 0.002",
+           color = "black",
+           size = 3)
+nmds_plot_arc
+```
+
+```{r}
+####FROM PHIND
+
+# Load required packages
+
+
+# Create species matrix
+# Assuming your data is in a format with species as columns and samples as rows
+species_matrix_arc <- as.matrix(your_data)
+
+# Perform NMDS analysis
+set.seed(123)  # For reproducibility
+nmds <- metaMDS(species_matrix, 
+                distance = "bray",  # Bray-Curtis dissimilarity
+                k = 3,             # 3 dimensions as specified
+                trymax = 20)       # 20 runs for stability
+
+# Check stress values
+stressplot(nmds)
+
+# Create environmental data frame
+env_data <- data.frame(
+  month = c("Month1", "Month2", ...),  # Your sampling months
+  fjord = c("Fjord1", "Fjord2", ...),  # Your fjord locations
+  diversity = c(1.2, 1.5, ...)        # Your diversity values
+)
+
+# Run envfit analysis
+env_fit <- envfit(nmds, env_data, 
+                  permutations = 999)
+
+# Create publication-ready plot
+plot_nmds <- autoplot(nmds) +
+  theme_pubr() +
+  geom_point(aes(color = factor(fjord)), size = 3) +
+  geom_text(aes(label = month), check_overlap = TRUE) +
+  theme(legend.position = "bottom")
+
+# Add environmental vectors
+plot_nmds +
+  geom_segment(data = env_fit$vectors,
+               aes(x = 0, y = 0, xend = NMDS1, yend = NMDS2),
+               arrow = arrow(length = unit(0.3, "cm"))) +
+  geom_text(data = env_fit$vectors,
+            aes(x = NMDS1, y = NMDS2, label = name),
+            vjust = -0.5) +
+  coord_fixed()
+```
+
+similarity index is bray-curtis, takes out similarities bc of zero-inflation (method = bray in r)
+
+nmds (meta_mds), index is bray instead of sum, add different colors/shapes for nets/stations, stress value will give an indication on how well the 2D-"smashing" works (\>0.2 suspect, \<0.3 arbitrary)
+
+## Multivariate analysis counts
+
+### Evas code
+
+```{r}
+#making community matrix and transforming data to prevent zero inflation
+library(analogue)
+mva_species_counts <- counts_wide |> 
+  ungroup() |> 
+  select(-station_no, -net_no)
+
+# environmental matrix can be used from before
+mva_environment
+```
+
+```{r}
+library(vegan)
+# getting coefficients etc. (interaction isn't significant so not included)
+mva_adonis_counts <- adonis2(mva_species_counts ~ station_no + net_no, data = mva_environment, method = "bray")
+mva_adonis_counts
+
+
+# making a nice plot
+mva_nmds_counts <- metaMDS(mva_species_counts, distance = "bray")
+# plot(mva_nmds) #hard to interpret
+mva_plotscores_counts <- as.data.frame(scores(mva_nmds_counts)$sites)
+
+mva_plotscores_counts_ext <- mva_plotscores_counts |> 
+  mutate(station_no = mva_environment$station_no,
+         net_no = mva_environment$net_no,
+         watermass = mva_environment$watermass)
+
+mva_plot_counts <- mva_plotscores_counts_ext |> 
+  ggplot(aes(x = NMDS1, y = NMDS2)) + 
+  geom_point(size = 4, aes(colour = as.factor(net_no), shape = as.factor(station_no))) + 
+  theme_bw() +
+  coord_equal() +
+  theme(legend.title = element_text(size = 12, colour = "black", face = "bold")) +
+  labs(x = "NMDS1", colour = "Watermass", y = "NMDS2", shape = "Station")  + 
+  scale_colour_manual(values = c("darkred", "firebrick2", "darkorchid3", "dodgerblue2", "navy"),
+                      labels = c("Surface Water", "MNAW", "MEIW", "Intermediate Layer", "Arctic-Influenced Water")) +
+  scale_shape_manual(values = c(15,16,17),
+                     labels = c("Eastern Station 1", "Eastern Station 2", "Western Station"))
+
+print(mva_plot_counts)
+mva_nmds_counts$stress
+
+#ggsave(here("output", "mva_counts_plot.png"), plot = density_heat_map, width = 120, height = 100, units = "mm", scale = 1.2)
+```

@@ -1,0 +1,2871 @@
+---
+title: "Species composition"
+author: "Lea Dober"
+format: html
+editor: visual
+editor_options: 
+  chunk_output_type: inline
+---
+
+# Dynamics of parasitism - prevalence, intensity, depth
+
+### Loading packages
+
+```{r}
+library(tidyverse)
+library(readxl)
+library(RColorBrewer)
+library(here)
+library(patchwork)
+library(plotly)
+library(ggrepel)
+library(forcats)
+library(rlang)
+library(ggalluvial)
+#library(glue)
+```
+
+# 1. Parasites and chaetognaths
+
+######### Parasitized chaetognaths data
+
+```{r}
+# Ordered by sampling events, amount of parasitized chaetognaths
+data_chaetognaths <- read_excel(here::here(
+    "data/ParaZoo_Master_database_April.xlsx")) |> 
+  janitor::clean_names() |> 
+  filter(host_phylum == "Chaetognatha") |> 
+  rename(sampling_event = "investigation_cruise_subproject", species = "scientific_name") |> 
+  mutate(
+    sampling_event = case_when(
+      str_detect(sampling_event, "^PARAZOO") ~ "4",
+      str_detect(sampling_event, "^ARJEL cruise RV Heincke 2022") & sampling_gear == "multinet 180 µm" ~ "1",
+      str_detect(sampling_event, "^ARJEL cruise RV Heincke 2022") & sampling_gear != "multinet 180 µm" ~ "Other",
+      str_detect(sampling_event, "^Barents Sea Ecosystem Survey 2023 Kronprins Haakon") ~ "2",
+      str_detect(sampling_event, "^UNIS Cruise Zooplankton 2024") ~ "3",
+      str_detect(sampling_event, regex(
+        paste(c(
+          "\\d{4}",                                  # Year pattern
+          "^NorHydro Hydrozoa course 2022 \\d{4}",   # NorHydro pattern
+          "^BIO325 2023 RV G\\. O\\. Sars",         # BIO325 pattern
+          "^HYDROINS September 2023 sampling trip",  # HYDROINS pattern
+          "^R/V G\\.O\\. Sars BIO325_24",           # R/V G.O. Sars pattern
+          "^Samples from Doris Björling"             # Doris Björling pattern
+        ), collapse = "|")
+      )) ~ "Other",
+      
+      TRUE ~ sampling_event
+    )) |> 
+  filter(!unique_internal_id %in% c("PZ0979", "PZ0980", "PZ0981", "PZ0984", "PZ0986", "PZ0988", "PZ0990", "PZ0993", "PZ0994", "PZ0996", "PZ0997", "PZ0998", "PZ0999", "PZ1000", "PZ1005", "PZ1006", "PZ1007", "PZ1010", "PZ1012", "PZ1013", "PZ1014", "PZ1015", "PZ1019", "PZ1025", "PZ1026", "PZ1028", "PZ1029", "PZ1032", "PZ1036", "PZ1037", "PZ1041", "PZ1044", "PZ1045", "PZ1048", "PZ1050", "PZ1051", "PZ1053", "PZ1055", "PZ1056", "PZ1057", "PZ1058", "PZ1062", "PZ1068", "PZ1070", "PZ1072", "PZ1075", "PZ1079", "PZ1080", "PZ1089", "PZ0793", "PZ0795", "PZ0799")) #drop all UNIS cases with "too much" numbers, and additional D varicus
+
+data_chaetognaths 
+```
+
+!!! Removed PZ numbers are only for UNIS case. PZ0001 and PZ0023 are in the same host but different species (only case??) --\> Make a note for the plot caption: 1 H. aduncum and 1 Didymozoid are found in the same host: In total there are 344 parasitized chaetognaths but in reality it is 343 - 2 Derogenes varicus with 2 different numbers in same hosts: PZ0793/92 - 2 Derogenes varicus with 2 different numbers in same host: PZ0794, PZ0795 - 2 Derogenes varicus with 2 different numbers in same host: PZ0798, PZ0799
+
+!!! There are more species included than the 4 Cases --\> some species/specimen might not appear in later plots (but will be marked) --\> In total parasitized chaetos for Case 1 - 4 is 332 (33)
+
+For one of the PZ numbers for case 4, I have more parasites than numbers, this is the case for --\> "PZ1007" Derogenes varicus
+
+Sankey diagram: How to deal with parasites that had the same host (make a list of which numbers that are) --\>
+
+"PZ0979", "PZ0980", "PZ0981", "PZ0984", "PZ0986", "PZ0988", "PZ0990", "PZ0993", "PZ0994", "PZ0996", "PZ0997", "PZ0998", "PZ0999", "PZ1000", "PZ1005", "PZ1006", "PZ1007", "PZ1010", "PZ1012", "PZ1013", "PZ1014", "PZ1015", "PZ1019", "PZ1025", "PZ1026", "PZ1028", "PZ1029", "PZ1032", "PZ1036", "PZ1037", "PZ1041", "PZ1044", "PZ1045", "PZ1048", "PZ1050", "PZ1051", "PZ1053", "PZ1055", "PZ1056", "PZ1057", "PZ1058", "PZ1062", "PZ1068", "PZ1070", "PZ1072", "PZ1075", "PZ1079", "PZ1080", "PZ1089", "PZ0793", "PZ0795", "PZ0799" "PZ0001" "PZ0023"
+
+The one were they have multiple parasites but only 1 number: "PZ0023", "PZ0140", "PZ0146", "PZ0154", "PZ0163", "PZ0178", "PZ0182", "PZ0191", "PZ0193", "PZ0255", "PZ0792", "PZ0978", "PZ0983", "PZ0985", "PZ0987", "PZ0989", "PZ0992", "PZ0995", "PZ1004", "PZ1009", "PZ1011", "PZ1017", "PZ1018", "PZ1024", "PZ1027", "PZ1031", "PZ1035", "PZ1040", "PZ1043", "PZ1047", "PZ1049", "PZ1052", "PZ1054", "PZ1061", "PZ1067", "PZ1069", "PZ1071", "PZ1074", "PZ1078", "PZ1155" - Code:\
+filter(!unique_internal_id %in% c("PZ0979", "PZ0980", "PZ0981", "PZ0984", "PZ0986", "PZ0988", "PZ0990", "PZ0993", "PZ0994", "PZ0996", "PZ0997", "PZ0998", "PZ0999", "PZ1000", "PZ1005", "PZ1006", "PZ1007", "PZ1010", "PZ1012", "PZ1013", "PZ1014", "PZ1015", "PZ1019", "PZ1025", "PZ1026", "PZ1028", "PZ1029", "PZ1032", "PZ1036", "PZ1037", "PZ1041", "PZ1044", "PZ1045", "PZ1048", "PZ1050", "PZ1051", "PZ1053", "PZ1055", "PZ1056", "PZ1057", "PZ1058", "PZ1062", "PZ1068", "PZ1070", "PZ1072", "PZ1075", "PZ1079", "PZ1080", "PZ1089", "PZ0793", "PZ0795", "PZ0799")) \|\> filter(quantity_of_organisms_number %in% c("2", "3", "4", "5", "6")))
+
+###### Individual parasites data
+
+```{r}
+# Excel table with individual parasites (how many parasites) for single PZ number for multiple parasites
+better_PZ<- read_excel(here::here(
+    "data/ParaZoo_Master_database_April.xlsx")) |> 
+  janitor::clean_names() |> 
+  filter(host_phylum == "Chaetognatha") |> 
+  rename(sampling_event = "investigation_cruise_subproject", species = "scientific_name") |> 
+   mutate(
+    sampling_event = case_when(
+      str_detect(sampling_event, "^PARAZOO") ~ "4",
+      str_detect(sampling_event, "^ARJEL cruise RV Heincke 2022") & sampling_gear == "multinet 180 µm" ~ "1",
+      str_detect(sampling_event, "^ARJEL cruise RV Heincke 2022") & sampling_gear != "multinet 180 µm" ~ "Other",
+      str_detect(sampling_event, "^Barents Sea Ecosystem Survey 2023 Kronprins Haakon") ~ "2",
+      str_detect(sampling_event, "^UNIS Cruise Zooplankton 2024") ~ "3",
+      str_detect(sampling_event, regex(
+        paste(c(
+          "\\d{4}",                                  # Year pattern
+          "^NorHydro Hydrozoa course 2022 \\d{4}",   # NorHydro pattern
+          "^BIO325 2023 RV G\\. O\\. Sars",         # BIO325 pattern
+          "^HYDROINS September 2023 sampling trip",  # HYDROINS pattern
+          "^R/V G\\.O\\. Sars BIO325_24",           # R/V G.O. Sars pattern
+          "^Samples from Doris Björling"             # Doris Björling pattern
+        ), collapse = "|")
+      )) ~ "Other",
+      
+      TRUE ~ sampling_event
+    )) |> 
+  mutate(
+    species = case_when(
+      str_detect(species, "^Gregarinasina sp indet") ~ "Apicomplexa sp. indet. (gregarine-like)",
+      str_detect(species, "^Diphyllobothrium sp") ~ "Diphyllobothrium sp. indet.",
+      str_detect(species, "^Ciliophora sp indet") ~ "Ciliophora sp. indet.",
+      str_detect(species, "^Isopoda sp indet") ~ "Isopoda sp. indet.",
+      str_detect(species, "^Didymozoidae sp indet") ~ "Didymozoidae sp. indet.",
+      str_detect(species, "^Didymozoidae sp") ~ "Didymozoidae sp. indet.",
+      str_detect(species, "^Chromista sp indet") ~ "Chromista sp. indet.",
+      str_detect(species, "^Digenea sp") ~ "Digenea sp. indet.",
+      TRUE ~ species
+    )
+  ) |> 
+  filter(unique_internal_id %in% c("PZ0023", "PZ0140", "PZ0146", "PZ0154", "PZ0163", "PZ0178", "PZ0182", "PZ0191", "PZ0193", "PZ0255", "PZ0792", "PZ1021", "PZ1017")) |> # PZ1007 has only one parasite to little (but in data it is labelled that this number has quantity of organism = 4, therefore this number was replace by a number of a different parasite with just one PZ1021 -> it will show up as 2 in the final table) 
+  mutate(quantity_of_organisms_number = as.integer(quantity_of_organisms_number)) |>
+  uncount(quantity_of_organisms_number) 
+  
+better_PZ
+```
+
+```{r}
+# removed PZ that have multiple parasites
+without_PZ_correct<- read_excel(here::here(
+    "data/ParaZoo_Master_database_April.xlsx")) |> 
+  janitor::clean_names() |> 
+  filter(host_phylum == "Chaetognatha") |> 
+  rename(sampling_event = "investigation_cruise_subproject", species = "scientific_name") |> 
+   mutate(
+    sampling_event = case_when(
+      str_detect(sampling_event, "^PARAZOO") ~ "4",
+      str_detect(sampling_event, "^ARJEL cruise RV Heincke 2022") & sampling_gear == "multinet 180 µm" ~ "1",
+      str_detect(sampling_event, "^ARJEL cruise RV Heincke 2022") & sampling_gear != "multinet 180 µm" ~ "Other",
+      str_detect(sampling_event, "^Barents Sea Ecosystem Survey 2023 Kronprins Haakon") ~ "2",
+      str_detect(sampling_event, "^UNIS Cruise Zooplankton 2024") ~ "3",
+      str_detect(sampling_event, regex(
+        paste(c(
+          "\\d{4}",                                  # Year pattern
+          "^NorHydro Hydrozoa course 2022 \\d{4}",   # NorHydro pattern
+          "^BIO325 2023 RV G\\. O\\. Sars",         # BIO325 pattern
+          "^HYDROINS September 2023 sampling trip",  # HYDROINS pattern
+          "^R/V G\\.O\\. Sars BIO325_24",           # R/V G.O. Sars pattern
+          "^Samples from Doris Björling"             # Doris Björling pattern
+        ), collapse = "|")
+      )) ~ "Other",
+      
+      TRUE ~ sampling_event
+    )) |> 
+  filter(!unique_internal_id %in% c("PZ0023", "PZ0140", "PZ0146", "PZ0154", "PZ0163", "PZ0178", "PZ0182", "PZ0191", "PZ0193", "PZ0255", "PZ0792", "PZ1017")) |>  # Filter out the additional numbers (PZ1004-PZ1006), because PZ1007 was put into 5 rows; PZ0145 is not removed, because I want it twice.
+  mutate(
+    species = case_when(
+      str_detect(species, "^Gregarinasina sp indet") ~ "Apicomplexa sp. indet. (gregarine-like)",
+      str_detect(species, "^Diphyllobothrium sp") ~ "Diphyllobothrium sp. indet.",
+      str_detect(species, "^Ciliophora sp indet") ~ "Ciliophora sp. indet.",
+      str_detect(species, "^Isopoda sp indet") ~ "Isopoda sp. indet.",
+      str_detect(species, "^Didymozoidae sp indet") ~ "Didymozoidae sp. indet.",
+      str_detect(species, "^Didymozoidae sp") ~ "Didymozoidae sp. indet.",
+      str_detect(species, "^Chromista sp indet") ~ "Chromista sp. indet.",
+      str_detect(species, "^Digenea sp") ~ "Digenea sp. indet.",
+      TRUE ~ species
+    )
+  )  #|> 
+# mutate(
+#    host_scientific_name = case_when(
+#      str_detect(host_scientific_name, "^Parasagitta sp indet") ~ "Parasagitta sp.",
+#      str_detect(host_scientific_name, "^Chaetognatha sp indet") ~ "Chaetognatha",
+#       str_detect(host_scientific_name, "^Chaetognatha sp indet") ~ "Chaetognatha",
+#      TRUE ~ host_scientific_name))
+without_PZ_correct
+```
+
+```{r}
+# Complete amount of parasites in total (some are in the same chaetognath)
+complete_PZ_correct <- bind_rows(without_PZ_correct, better_PZ)
+complete_PZ_correct
+```
+
+```{r}
+complete_PZ_correct |> 
+  #filter(!species %in% c("Gregarinasina sp indet", "Ciliophora sp indet", "Chromista sp indet")) |> 
+  count(species) |> 
+  mutate(species_number = sum(n))
+
+# Number of parasites of each class
+complete_PZ_correct |> 
+  #filter(!species %in% c("Gregarinasina sp indet", "Ciliophora sp indet", "Chromista sp indet")) |> 
+  count(class) |> 
+  mutate(class_number = sum(n))
+
+data_chaetognaths |> 
+  filter(phylum %in% c("Platyhelminthes")) |> 
+  count(phylum) |> 
+  mutate(species_number = sum(n))
+
+```
+
+##### Numbers for result text
+
+```{r}
+complete_PZ_correct |> 
+  count(sampling_event) |> 
+  mutate(species_number = sum(n))
+```
+
+```{r}
+data_chaetognaths |> 
+  filter(species == "Hysterothylacium aduncum") |> 
+  count(species)
+```
+
+```{r}
+dynamics |> 
+  count(parasitized_chaetognaths) |> 
+  mutate(number = n * parasitized_chaetognaths,
+         species)
+```
+
+390 parasitized chaetognaths
+
+# 1.1 Parasitized chaetognaths
+
+-   Barplot and how many parasitized chaetos
+
+```{r}
+#Barplot addition 2.0 with cases
+species_all_cases2 <- data_chaetognaths |> 
+   filter(sampling_event %in% c("1", "2", "3", "4")) |> 
+  mutate(
+    class = case_when(
+      str_detect(class, "^-") ~ "Protista",
+      str_detect(class, "^Conoidasida") ~ "Protista",
+      str_detect(class, "^Chromadorea") ~ "Nematoda",
+        TRUE ~ class
+    )
+  ) |>  
+  count(class, sampling_event) |> 
+  arrange(class, sampling_event)
+
+species_all_cases2
+```
+
+```{r}
+# New colours for cases
+
+case_colour <- c(
+  "orange2","cyan4", "gold","deeppink3",  "purple2")
+
+bar_plot <- ggplot(species_all_cases2, aes(x = factor(class, levels = unique(class)), 
+                       y = n), width = 0.8) +
+    theme_minimal() +
+   geom_col(aes(fill = sampling_event), position = position_dodge()) +
+  scale_fill_manual(values = case_colour) +
+   theme(axis.text.x = element_text(angle = 0, 
+                                    vjust = 1, 
+                                    hjust = 1,
+                                    face = "plain"),
+         panel.grid.minor = element_line(colour = "lightgray", size = 0.25),
+         panel.grid.major = element_line(colour = "gray90", size = 0.5),
+         plot.margin = margin(20, 5, 20, 10),
+         axis.title.x = element_text(margin = margin(t = 5, r = -6, b = 0, l = 15), size = 9)) +
+  labs(title = "",
+       x = "",
+       y = "Number of parasitized Chaetognatha") +
+   guides(fill=guide_legend(title="Sampling events")) +
+  # coord_cartesian(ylim = c(0, max(species_all_cases2$n) * 1.2)) +
+  coord_flip() +
+  scale_y_continuous(breaks = c(0, 25, 50, 75, 100, 125, 150))
+  
+bar_plot
+```
+
+```{r}
+bar_plot <- ggplot(species_all_cases2, aes(x = factor(case, levels = unique(case)), 
+                       y = n)) +
+    theme_minimal() +
+   geom_col(aes(fill = class), position = position_dodge(width = 0.9) ) +
+  scale_fill_manual(values = case_colour) +
+   theme( panel.grid.minor = element_blank(),
+          panel.grid.major = element_blank(), 
+         plot.margin = margin(20, 5, 20, 10)) +
+  labs(title = "4 cases parasite species distribution",
+       x = "",
+       y = "Number of parasitized Chaetognatha") +
+  coord_flip()
+  
+bar_plot
+```
+
+# 1.2 Parasitie composition
+
+-   Bar plots for overview plots of parasites found (in taxa)
+
+```{r}
+parasite_species <- function(mydf,
+                             case_number,
+                             sampling_year
+                             ) 
+  { mydf |> 
+    filter(sampling_event %in% case_number, year_collected == sampling_year) |> 
+    count(species, sampling_event) |> 
+    arrange(species, sampling_event) |> 
+    mutate(
+      n = if_else(species == "Gregarinasina sp indet", 93, n),
+      percentage = round((n / sum(n)) * 100, 1),
+      percentage_label = paste0(round(percentage, 1), "%")
+      ) |> 
+    mutate(n = as.numeric(n))
+}
+
+parasite<- parasite_species(mydf = complete_PZ_correct, 
+             case_number = c("3", "2", "1", "4"),
+             sampling_year = c("2023", "2022", "2024"))
+parasite
+
+```
+
+```{r}
+parasite_bar <- function(mydf, myxcol, myycol, bar_fill, colour_fill, limits_y, 
+                         legend_position, hjust_plot, title_size, ylab, text_size, 
+                         title, text_label, text_y, vjust_text, hjust_text, size_text, legend_title, bar_position) {
+  ggplot(data = mydf, aes(x = .data[[myxcol]]), fill = .data[[bar_fill]]) +
+    geom_col(aes(y = .data[[myycol]]), width = 0.8, position = bar_position) +
+    scale_fill_manual(values = colour_fill) +
+    theme_minimal() +
+    coord_flip() +
+    scale_y_continuous(limits = limits_y) +
+    theme(
+      legend.position = legend_position, 
+      legend.title = legend_title,
+      panel.grid.minor = element_line(colour = "lightgray", size = 0.25),
+      panel.grid.major = element_line(colour = "gray90", size = 0.5),
+      plot.margin = margin(20, 5, 20, 10),
+      axis.title.x = element_text(margin = margin(t = 5, r = -6, b = 0, l = 15), size = 9),
+      plot.title = element_text(hjust = hjust_plot),
+      axis.text.x = element_text(hjust = 0.5)
+    ) +
+    labs(
+      title = title,
+      x = "",
+      y = ylab
+    ) +
+    geom_text(aes_string(y = text_y, label = text_label), 
+              vjust = vjust_text, 
+              hjust = hjust_text, 
+              color = "black", 
+              size = size_text)
+}
+
+parasite_plot <- parasite_bar(mydf = parasite,
+                                      myxcol = "species",
+                                      myycol = "n",
+                                      bar_fill = "case",
+                                      colour_fill = c("orange2", "cyan4", "deeppink3", "gold"),
+                                      limits_y = c(0, 45),
+                                      legend_position = "bottom",
+                                      title_size = 24,
+                                      ylab = "Number of parasites",
+                                      text_size = 12,
+                                      title = "", 
+                                      text_label = "percentage_label",
+                                      text_y = "percentage",
+                                      vjust_text = 0.3,
+                                      hjust_text = 0,
+                                      size_text = 3.5,
+                                      legend_title = element_blank(),
+                                      bar_position = position_identity(),
+                               hjust_plot = 0.5
+                                      )
+
+parasite_plot
+
+```
+
+# 1.3 Chaeotognatha species
+
+```{r}
+chaetognath_species<- data_chaetognaths |> 
+ # filter(host_taxon_rank %in% "species") |> 
+  count(host_scientific_name, sampling_event) |> 
+  arrange(n, sampling_event) |> 
+   mutate(
+    host_label = sprintf("%s (Number: %d)", sampling_event, n)) |> 
+  mutate(n_totes = sum(n))
+chaetognath_species
+```
+
+```{r}
+colour_chaetos <- c("orange2", "cyan4", "gold", "deeppink3", "purple2")
+
+totals <- aggregate(n ~ host_scientific_name, data = chaetognath_species, FUN = sum)
+```
+
+```{r}
+bar_plot_3 <-ggplot(chaetognath_species, aes(x = host_scientific_name, 
+                           y = n)) +
+    theme_minimal() +
+    geom_col(aes(fill = sampling_event), position = position_dodge(), width = 0.8) +  # Reduced from 0.3 to 0.2
+    scale_fill_manual(values = colour_chaetos) +
+    labs(title = "", x = "", y = "Total number of identified Chaetognatha") +
+  theme(axis.text.x = element_text(angle = 45, 
+                                    vjust = 1, 
+                                    hjust = 1,
+                                    face = "italic"
+                              )) +
+    geom_text(data = totals,
+              aes(label = round(n),
+                  x = host_scientific_name,
+                  y = n),
+              vjust = -0.5,
+              hjust = 0.5,
+              size = 3.5) +
+    expand_limits(y = max(totals$n) * 1.1) +
+  guides(fill=guide_legend(title="Sampling events"))
+bar_plot_3
+```
+
+# 1.4 Association parasites and hosts
+
+-   Sankey plot with alluvial package
+
+```{r}
+library(glue)
+sankey_plot <- complete_PZ_correct |> 
+ # mutate(
+  #species = case_when(
+   # str_detect(species, "^Hysterothylacium aduncum") & host_scientific_name == "Parasagitta setosa" ~ "H. aduncum",
+   # str_detect(species, "^Hysterothylacium aduncum") & host_scientific_name == "Pseudosagitta lyra" ~ "H. aduncum",
+  #  TRUE ~ species
+#  )
+#) |>  ## code for small sankey plot
+  #filter(!species %in% c("Chromista sp.", "Diphyllobothrium lanceolatum", "Isopoda parasite", "Diphyllobothrium sp.", "Lecithocladium excisum", "Lecithaster gibbosus", "Hysterothylacium aduncum", "Digenea sp.")) |> # For small sankey plotH. aduncum and remove !
+    count(species, host_scientific_name) |> 
+    arrange(species, host_scientific_name) |> 
+    mutate(n = as.numeric(n)) |> 
+ #filter(!host_scientific_name %in% c("Parasagitta setosa", "Pseudosagitta lyra")) |> # code for big sankey plot
+  #  mutate(
+  #  parasite_species = glue::glue("{species} (n = {n})")
+  #) |>
+ #   mutate(
+#      species = factor(species),
+#      levels = c("Apicomplexa sp. indet. (gregarine-like)", "Ciliophora sp. indet.", "Chromista sp. indet.", 
+#"Derogenes varicus", "Hemiurus levinseni", "Lecithocladium excisum", "Lecithaster gibbosus", "Didymozoidae sp. indet.", "Digenea sp. indet.", "Diphyllobothrium lanceolatum", "Diphyllobothrium sp. indet.", "Hysterothylacium aduncum", "Isopoda sp. indet."),
+#                  ordered = TRUE)
+#  ) |> 
+  select(
+    "host species" = host_scientific_name,
+    "parasite species" = species,
+    n
+  ) 
+
+sankey_plot
+```
+
+```{r}
+colorblind_palette <- c(
+  "#1f77b4",  # Deep Blue
+    "#ff0000",  # Bright Red
+    "#2ca02c",  # Forest Green
+    "#9467bd",# Purple
+    "#7fbf7f",  # Orange
+    "deeppink",  # Pink
+    "#8c564b",  # Brown
+    "#7f7f7f",  # Gray
+    "#bcbd22",  # Olive
+    "#17becf",  # Cyan
+    "#332288",  # Magenta
+    "#ff7f0e",  # Turquoise
+    "#ffbb78" ,
+  "#CCBB44", "#EE6677",
+  "#332288", "#882255"
+)
+
+colour_small <- c(
+  "#337538", "#911088","#332288", "#FE5C56", "#F8C43C", "#CCBB44", "#EE6677",
+  "#332288", "#882255" 
+)
+
+data_lodes <- to_lodes_form(
+  data = sankey_plot,
+  axes = c("parasite species", "host species"),
+  id = "group_id",
+  weight = "n",
+  discern = TRUE
+)
+
+
+parasite_order <- sankey_plot$species (levels = c("Apicomplexa sp. indet. (gregarine-like)", "Ciliophora sp. indet.", "Chromista sp. indet.", 
+"Derogenes varicus", "Hemiurus levinseni", "Lecithocladium excisum", "Lecithaster gibbosus", "Didymozoidae sp. indet.", "Digenea sp. indet.", "Diphyllobothrium lanceolatum", "Diphyllobothrium sp. indet.", "Hysterothylacium aduncum", "Isopoda sp. indet."),
+                  ordered = TRUE)
+
+#custom_colors <- c("green", "blue", "red", "deeppink3", "yellow", "purple", "seagreen", "brown", "lightblue", "orange", "gold")
+#custom_colors <-  colorRampPalette(RColorBrewer::brewer.pal(8, "Dark2"))(11)
+#species_to_repel <- c("Hemiurus levinseni", "Ciliophora sp indet")
+#data_lodes$repel <- data_lodes$stratum %in% species_to_repel
+
+paired_colors <- brewer.pal(n = 15, name = "YlOrRd")
+custom_colors <- colorRampPalette(paired_colors)(15)
+reversed_colors <- rev(custom_colors)
+
+
+sankey<- ggplot(data_lodes,
+       aes(x = x, stratum = stratum, alluvium = group_id, y = n)) +
+  geom_flow(aes(fill = stratum),
+            width = 0.4, color = "darkgray") +
+  geom_stratum(width = 0.4, fill = NA, color = "black") +
+  geom_text(stat = "stratum",
+            aes(label = after_stat(stratum)),
+            size = 4,
+            fontface = "italic",
+            check_overlap = TRUE,
+            colour = "black"
+            ) +
+  scale_x_discrete(breaks = 1:2,
+                   labels = c("parasite Species", "host Species"),
+                   expand = c(0.1, 0.1)) +
+  scale_y_continuous(expand = expansion(mult = c(0.003, 0.003))) +
+  scale_fill_manual(values = colour_small) +
+  theme_minimal() +
+    theme(
+    legend.position = "bottom",
+    legend.title = element_blank(),
+    axis.text.x = element_blank(),
+    axis.title.x = element_blank(),
+    panel.grid.minor = element_blank(),
+    panel.grid.major.y = element_blank(),
+     axis.text.y = element_blank(),
+  axis.title.y = element_blank()
+  ) 
+sankey
+```
+
+####Tryout
+
+```{r}
+sankey_plot_new <- complete_PZ_correct |> 
+    count(species, host_scientific_name) |> 
+    arrange(species, host_scientific_name) |> 
+    mutate(n = as.numeric(n)) |> 
+  select(
+    "host species" = host_scientific_name,
+    "parasite species" = species,
+    n
+  ) 
+sankey_plot_new
+```
+
+```{r}
+# Define desired order for parasite species
+parasite_order <- c("Apicomplexa sp. indet. (gregarine-like)","Ciliophora sp. indet.","Chromista sp. indet.", "Derogenes varicus", "Hemiurus levinseni", "Lecithocladium excisum", "Lecithaster gibbosus", "Didymozoidae sp. indet.","Digenea sp. indet.", "Diphyllobothrium lanceolatum", "Diphyllobothrium sp. indet.","Hysterothylacium aduncum", "Isopoda sp. indet.")
+
+# Define desired order for host species
+host_order <- c("Eukrohnia hamata","Parasagitta elegans", "Parasagitta setosa", "Pseudosagitta lyra")
+
+# Convert columns to factors with specified orders
+sankey_plot_new$`parasite species` <- 
+  factor(sankey_plot_new$`parasite species`, 
+         levels = parasite_order)
+
+sankey_plot_new$`host species` <- 
+  factor(sankey_plot_new$`host species`, 
+         levels = host_order)
+
+
+# Create the lodes form (same as before)
+data_lodes <- to_lodes_form(
+  data = sankey_plot_new,
+  axes = c("parasite species", "host species"),
+  id = "group_id",
+  weight = "n",
+  discern = TRUE
+)
+
+# Create the plot with ordered factors
+sankey <- ggplot(data_lodes,
+                aes(x = x, stratum = stratum, alluvium = group_id, y = n)) +
+  geom_flow(aes(fill = stratum),
+           width = 0.4, color = "darkgray") +
+  geom_stratum(width = 0.4, fill = NA, color = "black") +
+ # geom_text(stat = "stratum",
+  #          aes(label = after_stat(stratum)),
+   #         size = 4,
+    #        fontface = "italic",
+     #       check_overlap = TRUE,
+      #      colour = "black") +
+  scale_x_discrete(breaks = 1:2,
+                  labels = c("parasite Species", "host Species"),
+                  expand = c(0.1, 0.1)) +
+  scale_y_continuous(expand = expansion(mult = c(0.003, 0.003))) +
+  scale_fill_manual(values = colorblind_palette) +
+  theme_minimal() +
+  theme(
+    legend.position = "",
+    legend.title = element_blank(),
+    axis.text.x = element_blank(),
+    axis.title.x = element_blank(),
+    panel.grid.minor = element_blank(),
+    panel.grid.major.y = element_blank(),
+    axis.text.y = element_blank(),
+    axis.title.y = element_blank()
+  )
+sankey
+```
+
+```{r}
+
+data_lodes <- to_lodes_form(
+  data = sankey_plot_new,
+  axes = c("parasite species", "host species"),
+  id = "group_id",
+  weight = "n",
+  discern = TRUE
+)
+
+new_parasite_order <- c(
+  "Apicomplexa sp. indet. (gregarine-like)",
+  "Ciliophora sp. indet.",
+  "Chromista sp. indet.",
+  "Derogenes varicus",
+  "Hemiurus levinseni",
+  "Lecithocladium excisum",
+  "Lecithaster gibbosus",
+  "Didymozoidae sp. indet.",
+  "Digenea sp. indet.",
+  "Diphyllobothrium lanceolatum",
+  "Diphyllobothrium sp. indet.",
+  "Hysterothylacium aduncum",
+  "Isopoda sp. indet."
+)
+
+# Modify the data frame to reorder strata
+data_lodes$stratum <- factor(data_lodes$stratum,
+                           levels = c(new_parasite_order, 
+                                    unique(data_lodes$stratum[!data_lodes$stratum %in% new_parasite_order])))
+
+# Update the plot
+sankey <- ggplot(data_lodes,
+                aes(x = x, stratum = stratum, alluvium = group_id, y = n)) +
+  geom_flow(aes(fill = stratum),
+            width = 0.4, color = "darkgray") +
+  geom_stratum(width = 0.4, fill = NA, color = "black") +
+  geom_text(stat = "stratum",
+            aes(label = after_stat(stratum)),
+            size = 4,
+            fontface = "italic",
+            check_overlap = TRUE,
+            colour = "black"
+            ) +
+  scale_x_discrete(breaks = 1:2,
+                   labels = c("Parasite Species", "Host Species"),
+                   expand = c(0.1, 0.1)) +
+  scale_y_continuous(expand = expansion(mult = c(0.003, 0.003))) +
+  scale_fill_manual(values = reversed_colors) +
+  theme_minimal() +
+  theme(
+    legend.position = "bottom",
+    legend.title = element_blank(),
+    axis.text.x = element_blank(),
+    axis.title.x = element_blank(),
+    panel.grid.minor = element_blank(),
+    panel.grid.major.y = element_blank(),
+    axis.text.y = element_blank(),
+    axis.title.y = element_blank()
+  )
+sankey
+```
+
+1)  I would really really like to see this as just one figure, because I feel having two is a little confusing for the reader and limits the power of the representation of strength of the associations. I know this is a problem because we have many parasites and this means the space for some of them will be very small, but can we try once, show it to me and then we decide? If we finaly decide to sompletely separate the figure in 2, then I think a better idea is to have the helminths in the first figure, and the protists + isopod in the second.
+
+2)  Change 'ciliate parasites' for Ciliophora gen. sp. or Ciliophora sp. indet. and it should not be in italics.
+
+3)  Do not put Didymozoidae sp. indet in italics
+
+4)  Change Gregarine-like parasites for Apicomplexa gen. sp. (gregarine-like) or Apicomplexa sp. indet. (gregarine-like) and it should not be in italics.
+
+5)  Do not put Chromista sp. indet in italics
+
+6)  The sp in Diphyllobothrium sp should not be in italics, but keep the name of the genus in italics
+
+7)  Change Hemiuridae sp. indet. for Digenea sp. indet. and it should not be in italics.
+
+8)  Change Isopoda parasite for Isopoda sp. indet. and it should not be in italics.
+
+9)  Change Chaetognatha for Chaetognatha sp. indet. and it should not be in italics
+
+10) can you rearrange the taxa? I think the best would be to have a phylogenetic arrangement of the parasites and for the hosts (i.e. an arrangement that reflects the tree of life). For your parasite taxa this means the following order:
+
+Apicomplexa sp. indet. (gregarine-like)
+
+Ciliophora sp. indet.
+
+Chromista sp. indet.
+
+Derogenes varicus
+
+Hemiurus levinseni
+
+Lecithocladium excisum
+
+Lecithaster gibbosus
+
+Didymozoidae sp. indet.
+
+Digenea sp. indet.
+
+Diphyllobothrium lanceolatum
+
+Diphyllobothrium sp. indet.
+
+Hysterothylacium aduncum
+
+Isopoda sp. indet.
+
+For the hosts this order is preferred:
+
+Eukrohnia hamata
+
+Parasagitta elegans
+
+Parasagitta setosa
+
+Pseudosagitta lyra
+
+Chaetognatha sp. indet.
+
+```{r}
+sankey_plot <- complete_PZ_correct |> 
+ # mutate(
+  #species = case_when(
+   # str_detect(species, "^Hysterothylacium aduncum") & host_scientific_name == "Parasagitta setosa" ~ "H. aduncum",
+   # str_detect(species, "^Hysterothylacium aduncum") & host_scientific_name == "Pseudosagitta lyra" ~ "H. aduncum",
+  #  TRUE ~ species
+#  )
+#) |>  ## code for small sankey plot
+ # filter(species %in% c("Chromista sp.", "Diphyllobothrium lanceolatum", "Isopoda parasite", "Diphyllobothrium sp.", "Lecithocladium excisum", "Lecithaster gibbosus", "Hysterothylacium aduncum", "Digenea sp.")) |> # For small sankey plotH. aduncum and remove !
+    count(species, host_scientific_name) |> 
+    arrange(species, host_scientific_name) |> 
+    mutate(n = as.numeric(n)) |> 
+ filter(!host_scientific_name %in% c("Parasagitta setosa", "Pseudosagitta lyra")) |> # code for big sankey plot
+  #  mutate(
+  #  parasite_species = glue::glue("{species} (n = {n})")
+  #) |>
+  select(
+    "host species" = host_scientific_name,
+    "parasite species" = species,
+    n
+  ) |> 
+  
+
+sankey_plot
+```
+
+```{r}
+# Some tryouts for different text options
+    geom_text(stat = "stratum",
+            aes(label = after_stat(stratum)),
+            data = data_lodes[data_lodes$repel == FALSE, ],
+            check_overlap = TRUE,
+            direction = "x",
+            hjust = 0.5,
+            vjust = 0.5) +
+  
+  # Repelled labels with vertical movement
+  geom_text_repel(stat = "stratum",
+                 aes(label = after_stat(stratum)),
+                 data = data_lodes[data_lodes$repel == TRUE, ],
+                 box.padding = 0.5,
+                 min.segment.length = 0,
+                 direction = "y",
+                 force = 0.8,
+                 max.iter = 2000) +
+```
+
+# 2. Dynamcis data
+
+```{r}
+dynamics <- read_excel(here::here(
+    "data/Data_dynamics_all_cases_without_intensity.xlsx")) |> 
+  janitor::clean_names() |> 
+   rename(sampling_event = "case") |> 
+  mutate(
+    sampling_event = case_when(
+      str_detect(sampling_event, "3") ~ "4",
+      str_detect(sampling_event, "1") ~ "1",
+      str_detect(sampling_event, "2") ~ "2",
+      str_detect(sampling_event, "4") ~ "3",
+      TRUE ~ sampling_event
+    )
+  )
+
+abundance <- dynamics |> 
+  mutate(station = case_when(
+    str_detect(station, "^Billefjord") ~ "Billefjorden",
+    str_detect(station, "^Bleik canyon") ~ "Bleik Canyon",
+    str_detect(station, "^Kongsfjord") ~ "Kongsfjorden",
+    str_detect(station, "^Krossfjord") ~ "Krossfjorden",
+    str_detect(station, "^Porsangerfjord") ~ "Porsangerfjorden",
+    str_detect(station, "^Van Mijenfjord") ~ "Van Mijenfjorden",
+    str_detect(station, "^Hornsund") ~ "Hornsund",
+    str_detect(station, "^west of Prins Karls Forland") ~ "Prins Karls Forland",
+    str_detect(station, "^north of Nordaustlandet") ~ "Nordaustlandet",
+    str_detect(station, "^northeast of Nordaustlandet") ~ "Nordaustlandet",
+    str_detect(station, "^north of Spitsbergen") ~ "North of Spitsbergen",
+    str_detect(station, "^mouth of Hinlopenstretet") ~ "Hinlopenstretet",
+    str_detect(station, "^north of Hinlopenstretet") ~ "Hinlopenstretet",
+    str_detect(station, "^west of Danskøya") ~ "Danskøya",
+    str_detect(station, "^Wijdfjord") ~ "Wijdefjorden",
+    str_detect(station, "^Rijpfjord") ~ "Rijpfjorden",
+    str_detect(station, "^north of Kvitøya") ~ "Kvitøya",
+    str_detect(station, "^northeast of Kvitøya") ~ "Kvitøya",
+    TRUE ~ station
+    ) )
+  
+
+dynamics|> 
+ summarise(count = sum(as.numeric(total_number_of_chaetognaths), na.rm = TRUE))
+```
+
+In total 19347 chaetognaths were checked for the cases 1, 2, 3, 4
+
+```{r}
+dynamics |> 
+  filter(sampling_event == "Sampling event 4", cruise == "PARAZOO 2023", station == "Fanafjord") |> 
+    summarise(count = sum(as.numeric(parasitized_chaetognaths), na.rm = TRUE))
+  
+```
+
+In total, 390 chaetognaths were parasitized.
+
+# 2.1 Temporal dynamics (Fjord 4)
+
+-   All for dynamics of sampling event 4 (Korsfjord, Fanafjord)
+-   Chaetognatha prevalence and density
+-   Parasite prevalence and density
+-   Total numbers for some of the parasites
+
+####2.1.1. Chaeto prevalence and density
+
+#### Relative species richness
+
+```{r}
+richness_data <- function(mydf, event, location_year, fjord)
+{ mydf |> 
+  filter(sampling_event %in% event, station %in% fjord, cruise == location_year) |>
+  group_by(station) |>
+  mutate(
+    net_area_m2 = as.numeric(net_area_m2),
+    sampling_depth = as.numeric(sampling_depth),
+    total_number_of_chaetognaths = as.numeric(total_number_of_chaetognaths),
+    number_of_eukrohnia_hamata = as.numeric(number_of_eukrohnia_hamata),
+    number_of_parasagitta_elegans = as.numeric(number_of_parasagitta_elegans)
+     ) |> 
+  mutate(
+    filtered_seawater = net_area_m2 * sampling_depth,
+    total_abundance = total_number_of_chaetognaths/filtered_seawater,
+    total_eukrohnia = number_of_eukrohnia_hamata/filtered_seawater,
+    total_parasagitta = number_of_parasagitta_elegans/filtered_seawater,
+    station = factor(station) ) |> 
+  mutate(
+    abundance_eukrohnia_hamata = total_eukrohnia/total_abundance,
+    abundance_parasagitta_elegans = total_parasagitta/total_abundance
+    ) |> 
+    drop_na(abundance_eukrohnia_hamata, abundance_parasagitta_elegans) |> 
+     summarise(
+    mean_total_abundance = mean(total_abundance),
+    mean_eukrohnia = mean(abundance_eukrohnia_hamata),
+    mean_parasagitta = mean(abundance_parasagitta_elegans)
+  )
+  
+  
+  #|> 
+ # mutate(
+#    filtered_seawater = round(filtered_seawater, digits = 1),
+#    total_abundance = round(total_abundance * 100, digits = 1),
+ #   abundance_eukrohnia_hamata = round(abundance_eukrohnia_hamata * 100, digits = 1)
+#    parasitized_abundance = round(parasitized_abundance * 100, digits = 1)
+#  )|> 
+ #  pivot_longer(cols = c(total_abundance, parasitized_abundance),
+#               names_to = "count_names",
+#               values_to = "count"
+#               ) |> 
+#  mutate(count_names = case_when(
+#                        str_detect(count_names, "^total_abundance") ~ "Sampled chaetognaths",
+#                        str_detect(count_names, "^parasitized_abundance") ~ "Parasitized chaetognaths",
+ #                       TRUE ~ count_names)) |> 
+#  mutate(
+#      sampling_date = parse_date(sampling_date, format = "%B %Y"),
+#        month = factor(format(sampling_date, "%b"),
+#                  levels = c("Jan", "Feb", "Mar", "Apr", "May", "Jun",
+#                           "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"),
+#                  ordered = TRUE)
+#  )  |> 
+#    mutate(count_names = factor(count_names,
+#                     levels=c( "Sampled chaetognaths", "Parasitized chaetognaths"),
+#                     ordered =TRUE)) |> 
+#    mutate(count = na_if(count, 0))
+}
+  
+ richness_ko23 <- richness_data(mydf = dynamics,
+                             event = c( "4"),
+                             location_year = c("PARAZOO 2023"),
+                             fjord = c("Korsfjord"))
+ richness_ko23
+
+ richness_ko24 <- richness_data(mydf = dynamics,
+                             event = c( "4"),
+                             location_year = "PARAZOO 2024",
+                             fjord = c("Korsfjord"))
+ richness_ko24
+
+ richness_fa23 <- richness_data(mydf = dynamics,
+                             event = c( "4"),
+                             location_year = "PARAZOO 2023",
+                             fjord = c("Fanafjord"))
+ richness_fa23
+```
+
+######## Density
+
+```{r}
+density_data <- function(mydf, event, location_year, fjord)
+{ mydf |> 
+  filter(sampling_event %in% event, station %in% fjord, cruise == location_year) |>
+  group_by(station, sampling_date) |>
+  mutate(
+    net_area_m2 = as.numeric(net_area_m2),
+    sampling_depth = as.numeric(sampling_depth),
+    total_number_of_chaetognaths = as.numeric(total_number_of_chaetognaths)
+     ) |> 
+  mutate(
+    filtered_seawater = net_area_m2 * sampling_depth,
+    total_abundance = total_number_of_chaetognaths/filtered_seawater,
+    parasitized_abundance = parasitized_chaetognaths/filtered_seawater,
+    station = factor(station) ) |> 
+  mutate(
+    filtered_seawater = round(filtered_seawater, digits = 1),
+    total_abundance = round(total_abundance * 100, digits = 1),
+    parasitized_abundance = round(parasitized_abundance * 100, digits = 1)
+  )|> 
+   pivot_longer(cols = c(total_abundance, parasitized_abundance),
+               names_to = "count_names",
+               values_to = "count"
+               ) |> 
+  mutate(count_names = case_when(
+                        str_detect(count_names, "^total_abundance") ~ "Sampled chaetognaths",
+                        str_detect(count_names, "^parasitized_abundance") ~ "Parasitized chaetognaths",
+                        TRUE ~ count_names)) |> 
+  mutate(
+      sampling_date = parse_date(sampling_date, format = "%B %Y"),
+        month = factor(format(sampling_date, "%b"),
+                  levels = c("Jan", "Feb", "Mar", "Apr", "May", "Jun",
+                           "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"),
+                  ordered = TRUE)
+  )  |> 
+    mutate(count_names = factor(count_names,
+                     levels=c( "Sampled chaetognaths", "Parasitized chaetognaths"),
+                     ordered =TRUE)) |> 
+    mutate(count = na_if(count, 0))
+}
+  
+density_ko23 <- density_data(mydf = dynamics,
+                             event = c( "4"),
+                             location_year = c("PARAZOO 2023"),
+                             fjord = c("Korsfjord"))
+density_ko23
+
+density_ko24 <- density_data(mydf = dynamics,
+                             event = c( "4"),
+                             location_year = "PARAZOO 2024",
+                             fjord = c("Korsfjord"))
+density_ko24
+
+density_fa23 <- density_data(mydf = dynamics,
+                             event = c( "4"),
+                             location_year = "PARAZOO 2023",
+                             fjord = c("Fanafjord"))
+density_fa23
+
+
+#dynamics |> 
+ # filter(sampling_event %in% c( "4"), station %in%  c("Korsfjord"), cruise == "PARAZOO 2023") |>
+  #group_by(station, sampling_date)
+```
+
+```{r}
+## Black design for thesis
+function(mydf, title_plot, ylab, colour_plot, legend_position, limits_y)
+  {  ggplot(mydf, aes(x = month, y = count, fill = count_names)) +
+    theme_minimal() +
+    geom_col() +
+    scale_y_continuous(limits = limits_y)+
+    theme(
+    panel.grid.minor = element_line(colour = "lightgray", size = 0.25),
+    panel.grid.major = element_line(colour = "gray90", size = 0.5),
+    plot.margin = margin(20, 5, 20, 10),
+    axis.title.x = element_text(margin = margin(t = 5, r = -6, b = 0, l = 15), size = 9),
+    plot.title = element_text(hjust = 0.5),
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    legend.position = legend_position,
+    legend.title = element_blank() 
+  ) +
+  labs(
+    title = title_plot,
+    x = "",
+    y = ylab
+  ) +
+  geom_text(aes(label = count), vjust = -1.3, hjust = 0.5, color = "white", size = 3.5) + # "black"
+  scale_fill_manual(values = rep(colour_plot, times = 12))
+
+}
+
+## White design for presentation
+
+density_plot <- function(mydf, title_plot, ylab, colour_plot, legend_position, limits_y)
+{  ggplot(mydf, aes(x = month, y = count, fill = count_names)) +
+    theme_minimal() +
+    geom_col() +
+    scale_y_continuous(limits = limits_y) +
+    theme(
+      # Remove grid lines
+      panel.grid.minor = element_blank(),
+      panel.grid.major = element_blank(),
+      
+      # Make axes white
+      axis.line.x = element_line(color = "white"),
+      axis.line.y = element_line(color = "white"),
+      
+      # Make text elements white
+      plot.title = element_text(hjust = 0.5, color = "white"),
+      axis.text.x = element_text(angle = 45, hjust = 1, color = "white"),
+      axis.text.y = element_text(color = "white"),
+      axis.title.x = element_text(margin = margin(t = 5, r = -6, b = 0, l = 15), size = 9, color = "white"),
+      axis.title.y = element_text(color = "white"),
+      
+      # Keep original margins
+      plot.margin = margin(20, 5, 20, 10),
+      
+      # Legend settings
+      legend.position = legend_position,
+      legend.title = element_blank(),
+      
+      # Make legend text white
+      legend.text = element_text(color = "white")
+    ) +
+    labs(
+      title = title_plot,
+      x = "",
+      y = ylab
+    ) +
+    geom_text(aes(label = count), vjust = -1.3, hjust = 0.5, color = "white", size = 3.5) +
+    scale_fill_manual(values = rep(colour_plot, times = 12))
+}
+
+density_plotko23 <- density_plot(mydf = density_ko23,
+                                 title_plot = "",
+                                 ylab = "Density of Chaetognatha (ind / 100m³)",
+                                 colour_plot = c("lightpink", "deeppink4"),
+                                 legend_position = "",
+                                 limits_y = c(0, 100))
+
+density_plotko23
+
+density_plotko24 <- density_plot(mydf = density_ko24,
+                                 title_plot = "",
+                                 ylab = "Density of Chaetognatha (ind / 100m³)",
+                                 colour_plot = c("lightpink", "deeppink4"),
+                                 legend_position = "",
+                                 limits_y = c(0, 100))
+
+density_plotko24
+
+density_plotfa23 <- density_plot(mydf = density_fa23,
+                                 title_plot = "",
+                                 ylab = "Density of Chaetognatha (ind / 100m³)",
+                                 colour_plot = c("lightpink", "deeppink4"),
+                                 legend_position = "",
+                                 limits_y = c(0, 100))
+
+density_plotfa23
+
+```
+
+####### Prevalence
+
+```{r}
+prevalence_fjord<- function(mydf, event, fjord, location_year) 
+  {mydf|> 
+ filter(sampling_event %in% event, station %in% fjord, cruise == location_year) |>
+  group_by(station, sampling_date) |>
+  mutate(
+    prevalence = as.numeric(parasitized_chaetognaths)/as.numeric(total_number_of_chaetognaths),
+    station = factor(station) ) |> 
+  mutate(
+    prevalence = round(prevalence * 100, digits = 1),
+    percentage_label = paste0(round(prevalence, 1), "%"))|> 
+  summarise(
+    prevalence = sum(prevalence, na.rm = TRUE),
+    percentage_label = paste0(round(prevalence, 1), "%")) |> 
+     mutate(
+      sampling_date = parse_date(sampling_date, format = "%B %Y"),
+        month = factor(format(sampling_date, "%b"),
+                  levels = c("Jan", "Feb", "Mar", "Apr", "May", "Jun",
+                           "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"),
+                  ordered = TRUE)
+  ) 
+    
+}
+
+prevalence_ko23 <- prevalence_fjord(mydf = dynamics,
+                             event = c( "4"),
+                             location_year = "PARAZOO 2023",
+                             fjord = c("Korsfjord"))
+prevalence_ko23
+
+prevalence_ko24 <- prevalence_fjord(mydf = dynamics,
+                             event = c( "4"),
+                             location_year = "PARAZOO 2024",
+                             fjord = c("Korsfjord"))
+prevalence_ko24
+
+prevalence_fa23 <- prevalence_fjord(mydf = dynamics,
+                             event = c( "4"),
+                             location_year = "PARAZOO 2023",
+                             fjord = c("Fanafjord"))
+prevalence_fa23
+```
+
+```{r}
+## Black design for thesis
+function(mydf, title_plot, ylab, colour_plot, legend_position, limits_y)
+{
+    ggplot(mydf, aes(x = month, y = prevalence)) +
+        theme_minimal() +
+        geom_col(fill = colour_plot) +
+        scale_y_continuous(limits = limits_y) +
+        theme(
+            panel.grid.minor = element_line(colour = "lightgray", size = 0.25),
+            panel.grid.major = element_line(colour = "gray90", size = 0.5),
+            plot.margin = margin(20, 5, 20, 10),
+            axis.title.x = element_text(margin = margin(t = 5, r = -6, b = 0, l = 15), size = 9),
+            plot.title = element_text(hjust = 0.5),
+            axis.text.x = element_text(angle = 45, hjust = 1),
+            legend.position = legend_position,
+            legend.title = element_blank()
+        ) +
+        labs(
+            title = title_plot,
+            x = "",
+            y = ylab
+        ) +
+        geom_text(aes(label = prevalence), 
+                  vjust = -0.5, 
+                  hjust = 0.5, 
+                  color = "black", 
+                  size = 3.5)
+}
+
+## White design for presentation
+
+prevalence_fjord <- function(mydf, title_plot, ylab, colour_plot, legend_position, limits_y)
+{
+    ggplot(mydf, aes(x = month, y = prevalence)) +
+        theme_minimal() +
+        geom_col(fill = colour_plot) +
+        scale_y_continuous(limits = limits_y) +
+        theme(panel.grid.minor = element_blank(),
+            panel.grid.major = element_blank(),
+            axis.line.x = element_line(color = "white"),
+            axis.line.y = element_line(color = "white"),
+            plot.title = element_text(hjust = 0.5, color = "white"),
+            axis.text.x = element_text(angle = 45, hjust = 1, color = "white"),
+            axis.text.y = element_text(color = "white"),
+            axis.title.x = element_text(margin = margin(t = 5, r = -6, b = 0, l = 15), size = 9, color = "white"),
+            axis.title.y = element_text(color = "white"),
+            plot.margin = margin(20, 5, 20, 10),
+            legend.position = legend_position,
+            legend.title = element_blank(),
+            legend.text = element_text(color = "white")
+        ) +
+        labs(
+            title = title_plot,
+            x = "",
+            y = ylab
+        ) +
+        geom_text(aes(label = prevalence), 
+                  vjust = -0.5, 
+                  hjust = 0.5, 
+                  color = "white", 
+                  size = 3.5)
+}
+
+prevalence_plotko23 <- prevalence_fjord(mydf = prevalence_ko23,
+                                 title_plot = "", #Korsfjord 2023
+                                 ylab = "Prevalence of parasitized Chaetognatha (%)",
+                                 colour_plot = c("deeppink4"),
+                                 legend_position = "",
+                                 limits_y = c(0, 15))
+
+prevalence_plotko23
+
+prevalence_plotko24 <- prevalence_fjord(mydf = prevalence_ko24,
+                                 title_plot = "",
+                                 ylab = "Prevalence of parasitized Chaetognatha (%)",
+                                 colour_plot = c("deeppink4"),
+                                 legend_position = "",
+                                 limits_y = c(0, 15))
+
+prevalence_plotko24
+
+prevalence_plotfa23 <- prevalence_fjord(mydf = prevalence_fa23,
+                                 title_plot = "",
+                                 ylab = "Prevalence of parasitized Chaetognatha (%)",
+                                 colour_plot = c("deeppink4"),
+                                 legend_position = "",
+                                 limits_y = c(0, 15))
+
+prevalence_plotfa23
+
+```
+
+```{r}
+# Fisher tests
+
+#Keep in mind that this comparison does not refer to the quantities of parasites, rather it shows whether the proportions of infested hosts are significantly different between the samples. (Rozsa, 2000)
+
+
+
+```
+
+###### Tryout 95%
+
+```{r}
+library(binom)
+
+prev_confidence <- function(mydf, event, fjord, location_year) {
+  mydf |>
+    filter(sampling_event %in% event, station %in% fjord, cruise == location_year) |>
+    group_by(station, sampling_date) |>
+    mutate(
+      prevalence = as.numeric(parasitized_chaetognaths)/as.numeric(total_number_of_chaetognaths),
+      station = factor(station)
+    ) |>
+    mutate(
+      prevalence = round(prevalence * 100, digits = 1),
+      percentage_label = paste0(round(prevalence, 1), "%")
+    ) |>
+    summarise(
+      n = sum(!is.na(parasitized_chaetognaths)),
+      successes = sum(parasitized_chaetognaths, na.rm = TRUE),
+      prevalence = sum(prevalence, na.rm = TRUE),
+      percentage_label = paste0(round(prevalence, 1), "%")
+    ) |>
+    ungroup() |>
+    mutate(
+      sampling_date = parse_date(sampling_date, format = "%B %Y"),
+      month = factor(format(sampling_date, "%b"),
+                    levels = c("Jan", "Feb", "Mar", "Apr", "May", "Jun",
+                             "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"),
+                    ordered = TRUE)
+    ) |> 
+    mutate(
+      ci_lower = prop.test(x = min(successes, n), n = n, conf.level = 0.95)$conf.int[1],
+      ci_upper = prop.test(x = min(successes, n), n = n, conf.level = 0.95)$conf.int[2]
+    ) |>
+    mutate(
+      ci_lower = round(ci_lower * 100, digits = 1),
+      ci_upper = round(ci_upper * 100, digits = 1),
+      ci_label = paste0(round(prevalence, 1), "% (", ci_lower, "-", ci_upper, ")")
+    )
+    
+}
+
+prevalence_ko23_conf <- prev_confidence(mydf = dynamics,
+                             event = c( "4"),
+                             location_year = "PARAZOO 2023",
+                             fjord = c("Korsfjord"))
+prevalence_ko23_conf
+```
+
+```{r}
+dynamics |> 
+filter(sampling_event %in% c("4"), station %in% "Korsfjord", cruise == "PARAZOO 2024") |>
+    group_by(station, sampling_date) |>
+    mutate(
+      prevalence = as.numeric(parasitized_chaetognaths)/as.numeric(total_number_of_chaetognaths),
+      parasitized_chaetognaths = as.numeric(parasitized_chaetognaths),
+      total_number_of_chaetognaths = as.numeric(total_number_of_chaetognaths),
+      station = factor(station)
+    ) |>
+    mutate(
+      prevalence = round(prevalence * 100, digits = 1),
+      percentage_label = paste0(round(prevalence, 1), "%")
+    ) |>
+    summarise(
+      n = parasitized_chaetognaths,
+      successes = parasitized_chaetognaths, na.rm = TRUE,
+      prevalence = prevalence, na.rm = TRUE,
+      percentage_label = paste0(round(prevalence, 1), "%")
+    ) |>
+   # ungroup() |>
+ #   mutate(
+#      sampling_date = parse_date(sampling_date, format = "%B %Y"),
+#      month = factor(format(sampling_date, "%b"),
+#                    levels = c("Jan", "Feb", "Mar", "Apr", "May", "Jun",
+#                             "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"),
+#                    ordered = TRUE)
+#    ) |> 
+    mutate(
+      ci_lower = prop.test(x = min(successes, n), n = n, conf.level = 0.95)$conf.int[1],
+      ci_upper = prop.test(x = min(successes, n), n = n, conf.level = 0.95)$conf.int[2]
+    ) |>
+    mutate(
+      ci_lower = round(ci_lower * 100, digits = 1),
+      ci_upper = round(ci_upper * 100, digits = 1)
+    #  ci_label = paste0(round(prevalence, 1), "% (", ci_lower, "-", ci_upper, ")")
+    )
+```
+
+#### 2.1.2 Parasite density
+
+######## Density
+
+```{r}
+density_data <- function(mydf, event, location_year, fjord)
+{ mydf |> 
+  filter(sampling_event %in% event, station %in% fjord, cruise == location_year) |>
+  mutate(
+    net_area_m2 = suppressWarnings(as.numeric(as.character(net_area_m2))),
+    sampling_depth = suppressWarnings(as.numeric(as.character(sampling_depth)))
+    ) |> 
+  mutate(
+    filtered_seawater = net_area_m2 * sampling_depth,
+  #  parasitized_abundance = parasitized_chaetognaths/filtered_seawater,
+    chromista_sp_indet_p_elegans = as.numeric(chromista_sp_indet_p_elegans)/filtered_seawater,
+    hysterothylacium_aduncum = as.numeric(hysterothylacium_aduncum)/filtered_seawater,
+    gregarinasina_sp_indet = as.numeric(gregarinasina_sp_indet)/filtered_seawater,
+    ciliophora_sp_indet = as.numeric(ciliophora_sp_indet)/filtered_seawater,
+    didymozoid_sp_indet = as.numeric(didymozoid_sp_indet)/filtered_seawater,
+    diphyllobothrium_sp = as.numeric(diphyllobothrium_sp)/filtered_seawater,
+    station = factor(station) ) |> 
+  mutate(
+    filtered_seawater = round(filtered_seawater, digits = 1),
+  #  parasitized_abundance = round(parasitized_abundance * 100, digits = 1),
+    chromista_sp_indet_p_elegans = round(chromista_sp_indet_p_elegans * 100, digits = 1),
+    hysterothylacium_aduncum = round(hysterothylacium_aduncum * 100, digits = 1),
+    gregarinasina_sp_indet = round(gregarinasina_sp_indet * 100, digits = 1),
+    ciliophora_sp_indet = round(ciliophora_sp_indet * 100, digits = 1),
+    didymozoid_sp_indet = round(didymozoid_sp_indet * 100, digits = 1),
+    diphyllobothrium_sp = round(diphyllobothrium_sp * 100, digits = 1)
+  )|> 
+   pivot_longer(cols = c(hysterothylacium_aduncum, gregarinasina_sp_indet, ciliophora_sp_indet, didymozoid_sp_indet, chromista_sp_indet_p_elegans, diphyllobothrium_sp),
+               names_to = "parasites_species",
+               values_to = "density"
+               ) |> 
+mutate(parasites_species = case_when(
+                        str_detect(parasites_species, "^hysterothylacium_aduncum") ~ "Hysterothylacium aduncum",
+                        str_detect(parasites_species, "^gregarinasina_sp_indet") ~ "Apicomplexa sp. indet. (gregarine-like)",
+                        str_detect(parasites_species, "^ciliophora_sp_indet") ~ "Ciliophora sp. indet.",
+                        str_detect(parasites_species, "^didymozoid_sp_indet") ~ "Didymozoidae sp. indet.",
+                        str_detect(parasites_species, "^diphyllobothrium_sp") ~ "Diphyllobothrium sp. indet.",
+                        str_detect(parasites_species, "^chromista_sp_indet_p_elegans") ~ "Chromista sp. indet.",
+                      #  str_detect(parasite_species, "^diphyllobothrium_lanceolatum") ~ "Diphyllobothrium lanceolatum",
+                      #  str_detect(parasite_species, "^derogenes_varicus") ~ "Derogenes varicus",
+                      #  str_detect(parasite_species, "^hemiurus_levinseni") ~ "Hemiurus levinseni",
+                      #  str_detect(parasite_species, "^lecithaster_gibbosus") ~ "Lecithaster gibbosus",
+                      #  str_detect(parasite_species, "^isopoda_sp_indet") ~ "Isopoda sp. indet.",
+                      #  str_detect(parasite_species, "^digenea_sp") ~ "Digenea sp. indet.",
+                        TRUE ~ parasites_species)) |> 
+    mutate(
+      sampling_date = parse_date(sampling_date, format = "%B %Y"),
+      month = factor(format(sampling_date, "%b"),
+                    levels = c("Jan", "Feb", "Mar", "Apr", "May", "Jun",
+                          "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"),
+                    ordered = TRUE)
+    )# |> 
+  #mutate(parasites_species = factor(parasites_species,
+  #                   levels=c( "Gregarine-like parasites", "Hysterothylacium aduncum", "Cilates", "Didymozoidae sp. indet", "Diphyllobothrium sp.", "Chromista sp. indet"),
+  #                   ordered =TRUE)) 
+}
+  
+density_ko23_pa <- density_data(mydf = dynamics,
+                             event = c( "4"),
+                             location_year = "PARAZOO 2023",
+                             fjord = c("Korsfjord"))
+density_ko23_pa
+
+density_ko24_pa <- density_data(mydf = dynamics,
+                             event = c( "4"),
+                             location_year = "PARAZOO 2024",
+                             fjord = c("Korsfjord"))
+density_ko24_pa
+
+density_fa23_pa <- density_data(mydf = dynamics,
+                             event = c( "4"),
+                             location_year = "PARAZOO 2023",
+                             fjord = c("Fanafjord"))
+density_fa23_pa
+```
+
+```{r}
+density_plot <- function(mydf, title_plot, ylab, colour_plot, legend_position, limits_y, breaks_y)
+  {  ggplot(mydf, aes(x = month, y = density, fill = parasites_species)) +
+    theme_minimal() +
+    geom_col() +
+    scale_y_continuous(limits = limits_y, breaks = breaks_y)+
+    theme(
+    panel.grid.minor = element_line(colour = "lightgray", size = 0.25),
+    panel.grid.major = element_line(colour = "gray90", size = 0.5),
+    plot.margin = margin(20, 5, 20, 10),
+    axis.title.x = element_text(margin = margin(t = 5, r = -6, b = 0, l = 15), size = 9),
+    plot.title = element_text(hjust = 0.5),
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    legend.position = legend_position,
+    legend.title = element_blank() 
+  ) +
+  labs(
+    title = title_plot,
+    x = "",
+    y = ylab
+  ) +
+#  geom_text(aes(label = count), vjust = 0, hjust = 0, color = "black", size = 3.5) +
+  scale_fill_manual(values = rep(colour_plot, times = 12))
+   
+}
+
+density_plotko23_pa <- density_plot(mydf = density_ko23_pa,
+                                 title_plot = "",
+                                 ylab = "Density of parasites (ind / 100m³)",
+                                 colour_plot = c( "lightblue", "blue4","cyan4", "lightblue4","turquoise3","purple4"),
+                                 legend_position = "bottom",
+                                 limits_y = c(0, 8),
+                                 breaks_y = c(0,2, 4, 6, 8, 10))
+
+density_plotko23_pa
+
+density_plotko24_pa <- density_plot(mydf = density_ko24_pa,
+                                 title_plot = "",
+                                 ylab = "Density of parasites (ind / 100m³)",
+                                 colour_plot = c( "lightblue", "blue4","cyan4", "lightblue4","turquoise3","purple4"),
+                                 legend_position = "bottom",
+                                 limits_y = c(0, 8),
+                                 breaks_y = c(0,2, 4, 6, 8, 10))
+
+density_plotko24_pa
+
+density_plotfa23_pa <- density_plot(mydf = density_fa23_pa,
+                                 title_plot = "",
+                                 ylab = "Density of parasites (ind / 100m³)",
+                                 colour_plot = c( "lightblue", "blue4","cyan4", "lightblue4","turquoise3","purple4"),
+                                 legend_position = "bottom",
+                                 limits_y = c(0, 8),
+                                 breaks_y = c(0,2, 4, 6, 8, 10))
+
+density_plotfa23_pa
+```
+
+##### Parasite relative species abundance
+
+-   Prevalence for parasites: parasites species (in locality)/all parasites (in locality)
+
+```{r}
+prevalence_par<- function(mydf, event,fjord, location_year) 
+  {mydf |>  
+  filter(sampling_event %in% event, station %in% fjord, cruise == location_year) |>
+    mutate(
+      sampling_date = parse_date(sampling_date, format = "%B %Y"),
+        month = factor(format(sampling_date, "%b"),
+                  levels = c("Jan", "Feb", "Mar", "Apr", "May", "Jun",
+                          "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"),
+                  ordered = TRUE)) |> 
+     group_by(station, month) |> 
+    select(-derogenes_varicus, hemiurus_levinseni, isopoda_sp_indet, diphyllobothrium_lanceolatum, lecithaster_gibbosus, digenea_sp) |> 
+     pivot_longer(cols = c(diphyllobothrium_sp, hysterothylacium_aduncum, didymozoid_sp_indet, ciliophora_sp_indet, gregarinasina_sp_indet, chromista_sp_indet_p_elegans),
+               names_to = "parasite_species",
+               values_to = "count"
+               ) |> 
+     select(station, cruise, parasitized_chaetognaths, parasite_species, count, month) |>
+    mutate(count = as.numeric(count)) |> 
+    replace_na(list(count = 0))|> 
+  group_by(station, month) |>
+  mutate(
+    n = sum(count),
+    station = factor(station) ) |> 
+mutate(prevalence = as.numeric(count)/as.numeric(n),
+       prevalence = round(prevalence * 100, digits = 1),
+       percentage_label = paste0(round(prevalence, 1), "%")) |> 
+mutate(parasite_species = case_when(
+                        str_detect(parasite_species, "^hysterothylacium_aduncum") ~ "Hysterothylacium aduncum",
+                        str_detect(parasite_species, "^gregarinasina_sp_indet") ~ "Apicomplexa sp. indet. (gregarine-like)",
+                        str_detect(parasite_species, "^ciliophora_sp_indet") ~ "Ciliophora sp. indet.",
+                        str_detect(parasite_species, "^didymozoid_sp_indet") ~ "Didymozoidae sp. indet.",
+                        str_detect(parasite_species, "^diphyllobothrium_sp") ~ "Diphyllobothrium sp. indet.",
+                        str_detect(parasite_species, "^chromista_sp_indet_p_elegans") ~ "Chromista sp. indet.",
+                      #  str_detect(parasite_species, "^diphyllobothrium_lanceolatum") ~ "Diphyllobothrium lanceolatum",
+                      #  str_detect(parasite_species, "^derogenes_varicus") ~ "Derogenes varicus",
+                      #  str_detect(parasite_species, "^hemiurus_levinseni") ~ "Hemiurus levinseni",
+                      #  str_detect(parasite_species, "^lecithaster_gibbosus") ~ "Lecithaster gibbosus",
+                      #  str_detect(parasite_species, "^isopoda_sp_indet") ~ "Isopoda sp. indet.",
+                      #  str_detect(parasite_species, "^digenea_sp") ~ "Digenea sp. indet.",
+                        TRUE ~ parasite_species)) 
+
+}
+
+
+prevalence_ko23_para <- prevalence_par(mydf = abundance,
+                             event = c( "4"),
+                             location_year = "PARAZOO 2023",
+                             fjord = c("Korsfjord"))
+prevalence_ko23_para
+
+prevalence_ko24_para <- prevalence_par(mydf = abundance,
+                             event = c( "4"),
+                             location_year = "PARAZOO 2024",
+                             fjord = c("Korsfjord"))
+prevalence_ko24_para
+
+prevalence_fa23_para <- prevalence_par(mydf = abundance,
+                             event = c( "4"),
+                             location_year = "PARAZOO 2023",
+                             fjord = c("Fanafjord"))
+prevalence_fa23_para
+
+```
+
+```{r}
+prevalence_par_ <- function(mydf, title_plot, ylab, colour_plot, legend_position, limits_y, breaks_y)
+  {  ggplot(mydf, aes(x = month, y = prevalence, fill = parasite_species)) +
+    theme_minimal() +
+    geom_col() +
+    scale_y_continuous(limits = limits_y)+
+    theme(
+    panel.grid.minor = element_line(colour = "lightgray", size = 0.25),
+    panel.grid.major = element_line(colour = "gray90", size = 0.5),
+    plot.margin = margin(20, 5, 20, 10),
+    axis.title.x = element_text(margin = margin(t = 5, r = -6, b = 0, l = 15), size = 9),
+    plot.title = element_text(hjust = 0.5),
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    legend.position = legend_position,
+    legend.title = element_blank() 
+  ) +
+  labs(
+    title = title_plot,
+    x = "",
+    y = ylab
+  ) +
+#  geom_text(aes(label = count), vjust = 0, hjust = 0, color = "black", size = 3.5) +
+  scale_fill_manual(values = colour_plot) #+
+   # coord_flip()
+   
+}
+
+prevalence_plotko23 <- prevalence_par_(mydf = prevalence_ko23_para,
+                                 title_plot = "", #Korsfjord 2023
+                                 ylab = "Prevalence of parasites (%)",
+                                 colour_plot = c( "lightblue", "blue4","cyan4", "lightblue4","turquoise3","purple4"),
+                                 legend_position = "bottom",
+                                 limits_y = c(0, 100))
+
+prevalence_plotko23
+
+prevalence_plotko24 <- prevalence_par_(mydf = prevalence_ko24_para,
+                                 title_plot = "",
+                                 ylab = "Prevalence of parasites (%)",
+                                 colour_plot = c(  "lightblue", "blue4","cyan4", "lightblue4","turquoise3","purple4"),
+                                 legend_position = "bottom",
+                                 limits_y = c(0, 100))
+
+prevalence_plotko24
+
+prevalence_plotfa23 <- prevalence_par_(mydf = prevalence_fa23_para,
+                                 title_plot = "Fanafjord 2023",
+                                 ylab = "Prevalence of parasites (%)",
+                                 colour_plot = c(  "lightblue", "blue4","cyan4", "lightblue4","turquoise3","purple4"),
+                                 legend_position = "bottom",
+                                 limits_y = c(0, 100))
+
+prevalence_plotfa23
+
+
+```
+
+```{r}
+prevalence_fjord<- function(mydf, event, fjord, location_year) 
+  {mydf|> 
+ filter(sampling_event %in% event, station %in% fjord, cruise == location_year) |>
+  group_by(station, sampling_date) |>
+  mutate(
+    prevalence = as.numeric(parasitized_chaetognaths)/as.numeric(total_number_of_chaetognaths),
+    station = factor(station) ) |> 
+  mutate(
+    prevalence = round(prevalence * 100, digits = 1),
+    percentage_label = paste0(round(prevalence, 1), "%"))|> 
+  summarise(
+    prevalence = sum(prevalence, na.rm = TRUE),
+    percentage_label = paste0(round(prevalence, 1), "%")) |> 
+     mutate(
+      sampling_date = parse_date(sampling_date, format = "%B %Y"),
+        month = factor(format(sampling_date, "%b"),
+                  levels = c("Jan", "Feb", "Mar", "Apr", "May", "Jun",
+                           "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"),
+                  ordered = TRUE)
+  ) 
+    
+}
+
+prevalence_ko23 <- prevalence_fjord(mydf = dynamics,
+                             event = c( "4"),
+                             location_year = "PARAZOO 2023",
+                             fjord = c("Korsfjord"))
+prevalence_ko23
+
+prevalence_ko24 <- prevalence_fjord(mydf = dynamics,
+                             event = c( "4"),
+                             location_year = "PARAZOO 2024",
+                             fjord = c("Korsfjord"))
+prevalence_ko24
+
+prevalence_fa23 <- prevalence_fjord(mydf = dynamics,
+                             event = c( "4"),
+                             location_year = "PARAZOO 2023",
+                             fjord = c("Fanafjord"))
+prevalence_fa23
+```
+
+######## Prevalence parasites
+
+```{r}
+prevalence_par<- function(mydf, event,fjord, location_year) 
+  {mydf |>  
+  filter(sampling_event %in% event, station %in% fjord, cruise == location_year) |>
+    mutate(
+      sampling_date = parse_date(sampling_date, format = "%B %Y"),
+        month = factor(format(sampling_date, "%b"),
+                  levels = c("Jan", "Feb", "Mar", "Apr", "May", "Jun",
+                          "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"),
+                  ordered = TRUE)) |> 
+     group_by(station, month) |> 
+    select(-derogenes_varicus, hemiurus_levinseni, isopoda_sp_indet, diphyllobothrium_lanceolatum, lecithaster_gibbosus, digenea_sp) |> 
+     pivot_longer(cols = c(diphyllobothrium_sp, hysterothylacium_aduncum, didymozoid_sp_indet, ciliophora_sp_indet, gregarinasina_sp_indet, chromista_sp_indet_p_elegans),
+               names_to = "parasite_species",
+               values_to = "count"
+               ) |> 
+     select(station, cruise, total_number_of_chaetognaths, parasite_species, count, month) |>
+    mutate(count = as.numeric(count)) |> 
+    replace_na(list(count = 0))|> 
+  group_by(station, month) |>
+  mutate(
+    n = sum(count),
+    station = factor(station) ) |> 
+mutate(prevalence = as.numeric(count)/as.numeric(total_number_of_chaetognaths),
+       prevalence = round(prevalence * 100, digits = 1),
+       percentage_label = paste0(round(prevalence, 1), "%")) |> 
+mutate(parasite_species = case_when(
+                        str_detect(parasite_species, "^hysterothylacium_aduncum") ~ "Hysterothylacium aduncum",
+                        str_detect(parasite_species, "^gregarinasina_sp_indet") ~ "Apicomplexa sp. indet. (gregarine-like)",
+                        str_detect(parasite_species, "^ciliophora_sp_indet") ~ "Ciliophora sp. indet.",
+                        str_detect(parasite_species, "^didymozoid_sp_indet") ~ "Didymozoidae sp. indet.",
+                        str_detect(parasite_species, "^diphyllobothrium_sp") ~ "Diphyllobothrium sp. indet.",
+                        str_detect(parasite_species, "^chromista_sp_indet_p_elegans") ~ "Chromista sp. indet.",
+                      #  str_detect(parasite_species, "^diphyllobothrium_lanceolatum") ~ "Diphyllobothrium lanceolatum",
+                      #  str_detect(parasite_species, "^derogenes_varicus") ~ "Derogenes varicus",
+                      #  str_detect(parasite_species, "^hemiurus_levinseni") ~ "Hemiurus levinseni",
+                      #  str_detect(parasite_species, "^lecithaster_gibbosus") ~ "Lecithaster gibbosus",
+                      #  str_detect(parasite_species, "^isopoda_sp_indet") ~ "Isopoda sp. indet.",
+                      #  str_detect(parasite_species, "^digenea_sp") ~ "Digenea sp. indet.",
+                        TRUE ~ parasite_species)) 
+
+}
+
+
+prevalence_ko23_para <- prevalence_par(mydf = abundance,
+                             event = c( "4"),
+                             location_year = "PARAZOO 2023",
+                             fjord = c("Korsfjord"))
+prevalence_ko23_para
+
+prevalence_ko24_para <- prevalence_par(mydf = abundance,
+                             event = c( "4"),
+                             location_year = "PARAZOO 2024",
+                             fjord = c("Korsfjord"))
+prevalence_ko24_para
+
+prevalence_fa23_para <- prevalence_par(mydf = abundance,
+                             event = c( "4"),
+                             location_year = "PARAZOO 2023",
+                             fjord = c("Fanafjord"))
+prevalence_fa23_para
+```
+
+```{r}
+prevalence_fa23_para |>
+  drop_na() |>
+  group_by(station, parasite_species, month) |>
+  count(prevalence) |>
+  mutate(prevalence_sum = n * prevalence) |>
+  filter(parasite_species == "Hysterothylacium aduncum") |> 
+  group_by(month, parasite_species) |>
+  summarise(
+    total_samples = sum(n),
+    total_prevalence = sum(prevalence_sum),
+    num_parasites = n_distinct(parasite_species)
+  )
+```
+
+```{r}
+prevalence_par_ <- function(mydf, title_plot, ylab, colour_plot, legend_position, limits_y, breaks_y)
+  {  ggplot(mydf, aes(x = month, y = prevalence, fill = parasite_species)) +
+    theme_minimal() +
+    geom_col() +
+    scale_y_continuous(limits = limits_y)+
+    theme(panel.grid.minor = element_blank(),
+          panel.grid.major = element_blank(),
+          axis.line.x = element_line(color = "white"),
+          axis.line.y = element_line(color = "white"),
+          plot.title = element_text(hjust = 0.5, color = "white"),
+          axis.text.x = element_text(angle = 45, hjust = 1, color = "white"),
+          axis.text.y = element_text(color = "white"),
+          axis.title.x = element_text(margin = margin(t = 5, r = -6, b = 0, l = 15), size = 9, color = "white"),
+          axis.title.y = element_text(color = "white"),
+          plot.margin = margin(20, 5, 20, 10),
+          legend.position = legend_position,
+          legend.title = element_blank(),
+          legend.text = element_text(color = "white") )+
+  labs(
+    title = title_plot,
+    x = "",
+    y = ylab
+  ) +
+  scale_fill_manual(values = colour_plot)
+   
+}
+
+prevalence_plotko23 <- prevalence_par_(mydf = prevalence_ko23_para,
+                                 title_plot = "", #Korsfjord 2023
+                                 ylab = "Prevalence of parasites (%)",
+                                 colour_plot = c( "lightblue", "blue4","cyan4", "lightblue4","turquoise3","purple4"),
+                                 legend_position = "",
+                                 limits_y = c(0, 15))
+
+prevalence_plotko23
+
+prevalence_plotko24 <- prevalence_par_(mydf = prevalence_ko24_para,
+                                 title_plot = "",
+                                 ylab = "Prevalence of parasites (%)",
+                                 colour_plot = c(  "lightblue", "blue4","cyan4", "lightblue4","turquoise3","purple4"),
+                                 legend_position = "bottom",
+                                 limits_y = c(0, 15))
+
+prevalence_plotko24
+
+prevalence_plotfa23 <- prevalence_par_(mydf = prevalence_fa23_para,
+                                 title_plot = "Fanafjord 2023",
+                                 ylab = "Prevalence of parasites (%)",
+                                 colour_plot = c(  "lightblue", "blue4","cyan4", "lightblue4","turquoise3","purple4"),
+                                 legend_position = "",
+                                 limits_y = c(0, 15))
+
+prevalence_plotfa23
+
+  
+```
+
+```{r}
+prevalence_fjord<- function(mydf, event, fjord, location_year) 
+  {mydf|> 
+ filter(sampling_event %in% event, station %in% fjord, cruise == location_year) |>
+  group_by(station, sampling_date) |>
+  mutate(
+    prevalence = as.numeric(parasitized_chaetognaths)/as.numeric(total_number_of_chaetognaths),
+    station = factor(station) ) |> 
+  mutate(
+    prevalence = round(prevalence * 100, digits = 1),
+    percentage_label = paste0(round(prevalence, 1), "%"))|> 
+  summarise(
+    prevalence = sum(prevalence, na.rm = TRUE),
+    percentage_label = paste0(round(prevalence, 1), "%")) |> 
+     mutate(
+      sampling_date = parse_date(sampling_date, format = "%B %Y"),
+        month = factor(format(sampling_date, "%b"),
+                  levels = c("Jan", "Feb", "Mar", "Apr", "May", "Jun",
+                           "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"),
+                  ordered = TRUE)
+  ) 
+    
+}
+
+prevalence_ko23 <- prevalence_fjord(mydf = dynamics,
+                             event = c( "4"),
+                             location_year = "PARAZOO 2023",
+                             fjord = c("Korsfjord"))
+prevalence_ko23
+
+prevalence_ko24 <- prevalence_fjord(mydf = dynamics,
+                             event = c( "4"),
+                             location_year = "PARAZOO 2024",
+                             fjord = c("Korsfjord"))
+prevalence_ko24
+
+prevalence_fa23 <- prevalence_fjord(mydf = dynamics,
+                             event = c( "4"),
+                             location_year = "PARAZOO 2023",
+                             fjord = c("Fanafjord"))
+prevalence_fa23
+```
+
+###### Total numbers of parasites
+
+-   Didymozoid, Chromista, Diphyllobothrium
+
+```{r}
+dynamics |>
+   filter(didymozoid_sp_indet, chromista_sp_indet_p_elegans, diphyllobothrium_sp_indet)
+   # if_all(c(didymozoid_sp_indet, chromista_sp_indet_p_elegans, diphyllobothrium_sp_indet), ~ . >= 0)
+  ) |> 
+  filter(cruise %in% "PARAZOO 2024" ) |>
+   mutate(
+    count = ciliophora_sp_indet
+  ) |> 
+summarise(count = sum(as.numeric(ciliophora_sp_indet), na.rm = TRUE))
+```
+
+```{r}
+dynamics |> 
+  mutate(didymozoid_sp_indet = ifelse(didymozoid_sp_indet == "-", 0, didymozoid_sp_indet)) |> 
+    filter(didymozoid_sp_indet >= 0, cruise %in% "PARAZOO 2023") #, station == "Korsfjord") 
+```
+
+Korsfjord 2024: No didymozoids Korsfjord and Fanafjord 2023: April 2023 3 didymozoids in 1 Eukrohnia hamata in Korsfjord.
+
+```{r}
+dynamics |> 
+  mutate(diphyllobothrium_sp_indet = ifelse(diphyllobothrium_sp_indet == "-", 0, diphyllobothrium_sp_indet)) |> 
+    filter(diphyllobothrium_sp_indet >= 0, cruise %in% "PARAZOO 2024")#, station == "Korsfjord")
+```
+
+2024 1 Diphyllobothrium in Korsfjord in December in Eukrohnia hamata. 2024 1 Chromista sp indet in Parasagitta elegans in November in Korsfjord.
+
+# 2.2 Spatial dynamics (Arctic 1, 2, 3)
+
+-   Chaetognatha prevalence and density
+-   parasite prevalence and density
+
+###### 2.2.1 Chaeto prevalence and density
+
+######### Density Arctic
+
+```{r}
+abundance_data2<- abundance |> 
+  filter(sampling_event %in% c( "2"),  !station %in% c("Barents Sea", "Porsangerfjorden", "Bleik Canyon")) |> #parasitized_chaetognaths >= 1,
+  group_by(station) |>
+  mutate(
+    net_area_m2 = as.numeric(net_area_m2),
+    sampling_depth = as.numeric(sampling_depth)
+  ) |> 
+  mutate(
+    filtered_seawater = net_area_m2 * sampling_depth,
+    total_abundance = numbers_of_chaetognaths_checked/filtered_seawater,
+    parasitized_abundance = parasitized_chaetognaths/filtered_seawater,
+    station = factor(station) ) |> 
+  mutate(
+    filtered_seawater = round(filtered_seawater, digits = 1),
+    total_abundance = round(total_abundance * 100, digits = 1),
+    parasitized_abundance = round(parasitized_abundance * 100, digits = 1)
+  )|> 
+   summarise(
+    total_abundance = sum(total_abundance, na.rm = TRUE),
+    parasitized_abundance = sum(parasitized_abundance, na.rm = TRUE),
+    filtered_seawater = sum(filtered_seawater, na.rm = TRUE),
+    numbers_of_chaetognaths_checked = sum(numbers_of_chaetognaths_checked, na.rm = TRUE),
+    parasitized_chaetognaths = sum(parasitized_chaetognaths, na.rm = TRUE)
+  ) |> 
+   pivot_longer(cols = c(total_abundance, parasitized_abundance),
+               names_to = "count_names",
+               values_to = "count"
+               ) |> 
+  mutate(count_names = case_when(
+                        str_detect(count_names, "^total_abundance") ~ "Examined for parasitism",
+                        str_detect(count_names, "^parasitized_abundance") ~ "Parasitized",
+                        TRUE ~ count_names)) |> 
+ mutate(station = factor(station, 
+                            levels = c("Prins Karls Forland", "Danskøya","Hinlopenstretet", "Kvitøya", "Nordaustlandet", "North of Spitsbergen")))
+abundance_data2
+```
+
+```{r}
+density_bar2<- ggplot(data = abundance_data2, aes_string(x = "station", y = "count", fill = "count_names")) +
+    geom_col(aes_string(y = "count", fill = "count_names"), 
+             width = 0.8, 
+             position = position_identity())  +
+    scale_fill_manual(values = c( "lightblue",  "cyan4")) +
+    theme_minimal() +
+    coord_flip() +
+    scale_y_continuous(limits = c(0, 800)) +
+    theme(
+      legend.position = "bottom", 
+      legend.title = element_blank(),
+      panel.grid.minor = element_line(colour = "lightgray", size = 0.25),
+      panel.grid.major = element_line(colour = "gray90", size = 0.5),
+      plot.margin = margin(20, 5, 20, 10),
+      axis.title.x = element_text(margin = margin(t = 5, r = -6, b = 0, l = 15), size = 9),
+      plot.title = element_text(hjust = 0.3),
+      axis.text.x = element_text(hjust = 0.5)
+    ) +
+    labs(
+      title = "",
+      x = "",
+      y = "Density of Chaetognaths (ind / 100m³) in September 2023"
+    ) +
+    geom_text(aes_string(y = "count", label = "count"), 
+              vjust = 0.3, 
+              hjust = 0, 
+              color = "black", 
+              size = 3.5)
+
+density_bar2
+```
+
+```{r}
+abundance_data <- function(mydf, event, loc_order)
+  { mydf|> 
+  filter(sampling_event %in% event) |>
+  group_by(station) |>
+  mutate(
+    filtered_volume_1_2 = suppressWarnings(as.numeric(as.character(filtered_volume_1_2))),
+    net_area_m2 = suppressWarnings(as.numeric(as.character(net_area_m2))),
+    sampling_depth = suppressWarnings(as.numeric(as.character(sampling_depth)))
+  ) |> 
+  mutate(
+    total_abundance = numbers_of_chaetognaths_checked/filtered_volume_1_2,
+    parasitized_abundance = parasitized_chaetognaths/filtered_volume_1_2,
+    station = factor(station) ) |> 
+  mutate(
+    filtered_volume_1_2 = round(filtered_volume_1_2, digits = 1),
+    total_abundance = round(total_abundance * 100, digits = 1),
+    parasitized_abundance = round(parasitized_abundance * 100, digits = 1)
+  )|> 
+   summarise(
+    total_abundance = sum(total_abundance, na.rm = TRUE),
+    parasitized_abundance = sum(parasitized_abundance, na.rm = TRUE),
+    filtered_volume_1_2 = sum(filtered_volume_1_2, na.rm = TRUE),
+    numbers_of_chaetognaths_checked = sum(numbers_of_chaetognaths_checked, na.rm = TRUE),
+    parasitized_chaetognaths = sum(parasitized_chaetognaths, na.rm = TRUE)
+  ) |> 
+   pivot_longer(cols = c(total_abundance, parasitized_abundance),
+               names_to = "count_names",
+               values_to = "count"
+               ) |> 
+  mutate(count_names = case_when(
+                        str_detect(count_names, "^total_abundance") ~ "Examined for parasitism",
+                        str_detect(count_names, "^parasitized_abundance") ~ "Parasitized",
+                        TRUE ~ count_names)) |> 
+ mutate(station = factor(station, 
+                            levels =   loc_order)) 
+}
+  
+abundance_data_3 <- abundance_data(mydf = abundance,
+                                   event = c( "3"),
+                                   loc_order = c("Kongsfjorden","Wijdefjorden", "Rijpfjorden"))
+
+abundance_data_1 <- abundance_data(mydf = abundance,
+                                   event = c( "1"),
+                                   loc_order = c( "Bleik Canyon","Porsangerfjorden", "Barents Sea", 
+                                                  "Hornsund","Van Mijenfjorden",
+                                                  "Billefjorden","Kongsfjorden","Krossfjorden") )
+```
+
+```{r}
+density_bar<-  function(mydf, fill, ylab, plot_title, limits_y) 
+    {ggplot(data = mydf, aes_string(x = "station", y = "count", fill = "count_names")) +
+    geom_col(aes_string(y = "count", fill = "count_names"), 
+             width = 0.8, 
+             position = position_identity())  +
+    scale_fill_manual(values = fill) +
+    theme_minimal() +
+    coord_flip() +
+    scale_y_continuous(limits = limits_y) +
+    theme(
+      legend.position = "bottom", 
+      legend.title = element_blank(),
+      panel.grid.minor = element_line(colour = "lightgray", size = 0.25),
+      panel.grid.major = element_line(colour = "gray90", size = 0.5),
+      plot.margin = margin(20, 5, 20, 10),
+      axis.title.x = element_text(margin = margin(t = 5, r = -6, b = 0, l = 15), size = 9),
+      plot.title = element_text(hjust = 0.3),
+      axis.text.x = element_text(hjust = 0.5)
+    ) +
+    labs(
+      title = plot_title,
+      x = "",
+      y = ylab
+    ) +
+    geom_text(aes_string(y = "count", label = "count"), 
+              vjust = 0.3, 
+              hjust = 0, 
+              color = "black", 
+              size = 3.5)
+}
+
+density_bar3 <- density_bar(mydf = abundance_data_3,
+                            fill = c( "khaki", "gold"),
+                            ylab = "Density of Chaetognaths (ind / 100m³) in September 2024",
+                            plot_title = "",
+                            limits_y = c(0, 30))
+density_bar1 <- density_bar(mydf = abundance_data_1,
+                            fill = c(  "burlywood2", "orange2"),
+                            ylab = "Density of Chaetognaths (ind / 100m³) in August 2022",
+                            plot_title = "",
+                            limits_y = c(0, 2000))
+
+
+```
+
+###### Prevalence Arctic
+
+```{r}
+prevalence_data<- function(mydf, event, loc_order) 
+  {mydf|> 
+  filter(sampling_event %in% event) |>
+  group_by(station) |>
+  mutate(
+    prevalence = parasitized_chaetognaths/numbers_of_chaetognaths_checked,
+    station = factor(station) ) |> 
+  mutate(
+    prevalence = round(prevalence * 100, digits = 1),
+    percentage_label = paste0(round(prevalence, 1), "%"))|> 
+  summarise(
+    prevalence = sum(prevalence, na.rm = TRUE),
+    percentage_label = paste0(round(prevalence, 1), "%")) |> 
+  mutate(station = factor(station, 
+                            levels =   loc_order))
+}
+
+prevalence_data3 <- prevalence_data(mydf = abundance,
+                                   # prevalence_formula = "parasitized_chaetognaths/numbers_of_chaetognaths_checked",
+                                    event = "3",
+                                    loc_order = c("Kongsfjorden","Wijdefjorden", "Rijpfjorden"))
+
+prevalence_data2 <- prevalence_data(mydf = abundance,
+                                    event = "2",
+                                    loc_order = c("Prins Karls Forland", "Danskøya","Hinlopenstretet", "Kvitøya",
+                                                  "Nordaustlandet", "North of Spitsbergen"))
+  
+prevalence_data1 <- prevalence_data(mydf = abundance,
+                                    event = "1",
+                                    loc_order = c( "Bleik Canyon","Porsangerfjorden", "Barents Sea", 
+                                                  "Hornsund","Van Mijenfjorden",
+                                                  "Billefjorden","Kongsfjorden","Krossfjorden"))
+```
+
+```{r}
+prevalence_bar <- function(mydf, colour_plot, limits_y, yaxis_text) 
+  { ggplot(data = mydf, aes_string(x = "station", y = "prevalence")) +
+    geom_col(fill =  colour_plot) +
+    theme_minimal() +
+    coord_flip() +
+    scale_y_continuous(limits = limits_y) +
+    #theme(
+    #  legend.position = "bottom", 
+    #  legend.title = element_blank(),
+    #  panel.grid.minor = element_line(colour = "lightgray", size = 0.25),
+     # panel.grid.major = element_line(colour = "gray90", size = 0.5),
+     # plot.margin = margin(20, 5, 20, 10),
+    #  axis.title.x = element_text(margin = margin(t = 5, r = -6, b = 0, l = 15), size = 9),
+    #  plot.title = element_text(hjust = 0.5),
+    #  axis.text.x = element_text(hjust = 0.5)
+    #) +
+     theme(panel.grid.minor = element_blank(),
+            panel.grid.major = element_blank(),
+            axis.line.x = element_line(color = "white"),
+            axis.line.y = element_line(color = "white"),
+            plot.title = element_text(hjust = 0.5, color = "white"),
+            axis.text.x = element_text(angle = 45, hjust = 1, color = "white"),
+            axis.text.y = element_text(color = "white"),
+            axis.title.x = element_text(margin = margin(t = 5, r = -6, b = 0, l = 15), size = 9, color = "white"),
+            axis.title.y = element_text(color = "white"),
+            plot.margin = margin(20, 5, 20, 10),
+            legend.position = "",
+            legend.title = element_blank(),
+            legend.text = element_text(color = "white")
+        ) +
+    labs(
+      title = "",
+      x = "",
+      y = yaxis_text
+    ) +
+    geom_text(aes_string(y = "prevalence", label = "prevalence"), 
+              vjust = 0.3, 
+              hjust = 0, 
+              color = "white", 
+              size = 3.5)
+}
+
+prevalence_bar3 <- prevalence_bar(mydf = prevalence_data3,
+                                  colour_plot = "gold",
+                                  limits_y = c(0, 50),
+                                  yaxis_text = "Prevalence of parasitized chaetognaths (%) in September 2024")
+
+prevalence_bar2 <- prevalence_bar(mydf = prevalence_data2,
+                                  colour_plot = "cyan4",
+                                  limits_y = c(0, 50),
+                                  yaxis_text = "Prevalence of parasitized chaetognaths (%) in September/October 2023")
+
+prevalence_bar1 <- prevalence_bar(mydf = prevalence_data1,
+                                  colour_plot = "orange2",
+                                  limits_y = c(0, 50),
+                                  yaxis_text = "Prevalence of parasitized chaetognaths (%) in August 2022")
+```
+
+######## 2.2.2 Parasites density
+
+######## Density para arctic
+
+```{r}
+density_data2 <- function(mydf, event, loc_order)
+{ mydf |> 
+  filter(sampling_event %in% event) |>
+  mutate(
+    net_area_m2 = suppressWarnings(as.numeric(as.character(net_area_m2))),
+    sampling_depth = suppressWarnings(as.numeric(as.character(sampling_depth)))
+    ) |> 
+  mutate(
+    filtered_seawater = net_area_m2 * sampling_depth,
+    hemiurus_levinseni = as.numeric(hemiurus_levinseni)/filtered_seawater,
+    derogenes_varicus = as.numeric(derogenes_varicus)/filtered_seawater,
+    diphyllobothrium_sp = as.numeric(diphyllobothrium_sp)/filtered_seawater,
+    digenea_sp = as.numeric(digenea_sp)/filtered_seawater,
+    isopoda_sp_indet = as.numeric(isopoda_sp_indet)/filtered_seawater,
+    station = factor(station) ) |> 
+  mutate(
+    filtered_seawater = round(filtered_seawater, digits = 1),
+    derogenes_varicus = round(derogenes_varicus * 100, digits = 1),
+    hemiurus_levinseni = round(hemiurus_levinseni * 100, digits = 1),
+    isopoda_sp_indet = round(isopoda_sp_indet * 100, digits = 1),
+    diphyllobothrium_sp = round(diphyllobothrium_sp * 100, digits = 1),
+    digenea_sp = round(digenea_sp * 100, digits = 1)
+     )|> 
+   pivot_longer(cols = c(derogenes_varicus, hemiurus_levinseni, diphyllobothrium_sp, isopoda_sp_indet, digenea_sp),
+               names_to = "count_names",
+               values_to = "count"
+               ) |> 
+  mutate(count_names = case_when(
+                        str_detect(count_names, "^derogenes_varicus") ~ "Derogenes varicus",
+                        str_detect(count_names, "^hemiurus_levinseni") ~ "Hemiurus levinseni",
+                        str_detect(count_names, "^diphyllobothrium_sp") ~ "Diphyllobothrium sp.",
+                        str_detect(count_names, "^isopoda_sp_indet") ~ "Isopoda sp. indet",
+                        str_detect(count_names, "^digenea_sp") ~ "Digenea sp. indet.",
+                        TRUE ~ count_names)) |> 
+  mutate(station = factor(station, 
+                            levels = c("Prins Karls Forland", "Danskøya","Hinlopenstretet", "Kvitøya", "Nordaustlandet", "North of Spitsbergen")),ordered = TRUE) |> 
+    replace_na(list(count = 0))
+}
+  
+
+
+density_2_pa <- density_data2(mydf =  abundance,
+                             loc_order = c("Prins Karls Forland", "Danskøya","Hinlopenstretet", "Kvitøya", "Nordaustlandet",
+                               "North of Spitsbergen"),
+                             event = c( "2"))
+density_2_pa
+
+```
+
+```{r}
+
+density_data1 <- function(mydf, event, loc_order)
+{ mydf |> 
+  filter(sampling_event %in% event) |>
+  mutate(
+    filtered_volume_1_2 = suppressWarnings(as.numeric(as.character(filtered_volume_1_2))),
+    net_area_m2 = suppressWarnings(as.numeric(as.character(net_area_m2))),
+    sampling_depth = suppressWarnings(as.numeric(as.character(sampling_depth)))
+  ) |> 
+  mutate(
+    hemiurus_levinseni = as.numeric(hemiurus_levinseni)/filtered_volume_1_2,
+   lecithaster_gibbosus = as.numeric(lecithaster_gibbosus)/filtered_volume_1_2,
+    derogenes_varicus = as.numeric(derogenes_varicus)/filtered_volume_1_2,
+    hysterothylacium_aduncum = as.numeric(hysterothylacium_aduncum)/filtered_volume_1_2,
+    diphyllobothrium_sp = as.numeric(diphyllobothrium_sp)/filtered_volume_1_2,
+    diphyllobothrium_lanceolatum = as.numeric(diphyllobothrium_lanceolatum)/filtered_volume_1_2,
+    didymozoid_sp_indet = as.numeric(didymozoid_sp_indet)/filtered_volume_1_2,
+    station = factor(station) ) |> 
+  mutate(
+    filtered_volume_1_2 = round(filtered_volume_1_2, digits = 1),
+    derogenes_varicus = round(derogenes_varicus * 100, digits = 1),
+    lecithaster_gibbosus = round(lecithaster_gibbosus * 100, digits = 1),
+    hemiurus_levinseni = round(hemiurus_levinseni * 100, digits = 1),
+    hysterothylacium_aduncum = round(hysterothylacium_aduncum * 100, digits = 1),
+   # diphyllobothrium_sp = round(diphyllobothrium_sp * 100, digits = 1),
+    diphyllobothrium_lanceolatum = round(diphyllobothrium_lanceolatum * 100, digits = 1),
+    didymozoid_sp_indet = round(didymozoid_sp_indet * 100, digits = 1)
+    )|> 
+   pivot_longer(cols = c(derogenes_varicus, hemiurus_levinseni, diphyllobothrium_lanceolatum, diphyllobothrium_sp, hysterothylacium_aduncum, didymozoid_sp_indet, lecithaster_gibbosus),
+               names_to = "count_names",
+               values_to = "count"
+               ) |> 
+  mutate(count_names = case_when(
+                        str_detect(count_names, "^derogenes_varicus") ~ "Derogenes varicus",
+                       str_detect(count_names, "^lecithaster_gibbosus") ~ "Lecithaster gibbosus",
+                        str_detect(count_names, "^hemiurus_levinseni") ~ "Hemiurus levinseni",
+                        str_detect(count_names, "^hysterothylacium_aduncum") ~ "Hysterothylacium aduncum",
+                        #str_detect(count_names, "^diphyllobothrium_sp") ~ "Diphyllobothrium sp.",
+                        str_detect(count_names, "^diphyllobothrium_lanceolatum") ~ "Diphyllobothrium lanceolatum",
+                        str_detect(count_names, "^didymozoid_sp_indet") ~ "Didymozoidae sp. indet",
+                        TRUE ~ count_names)) |> 
+  mutate(station = factor(station, 
+                            levels = loc_order), ordered = TRUE)|>
+    drop_na(count) |> 
+     arrange(desc(count))
+}
+density_1_pa <- density_data1(mydf =  abundance,
+                             loc_order = c( "Bleik Canyon","Porsangerfjorden", "Barents Sea", 
+                                            "Hornsund","Van Mijenfjorden",
+                                            "Billefjorden","Kongsfjorden","Krossfjorden"),
+                             event = c( "1"))
+density_1_pa
+
+  
+density_3_pa <- density_data1(mydf = abundance,
+                                   event = c( "3"),
+                                   loc_order = c("Kongsfjorden","Wijdefjorden", "Rijpfjorden"))
+density_3_pa
+
+
+```
+
+```{r}
+density_plot <- function(mydf, title_plot, ylab, colour_plot, legend_position, limits_y, breaks_y)
+  {  ggplot(mydf, aes(x = station, y = count, fill = count_names)) +
+    theme_minimal() +
+    geom_col() +
+    scale_y_continuous(limits = limits_y, breaks = breaks_y)+
+    theme(
+    panel.grid.minor = element_line(colour = "lightgray", size = 0.25),
+    panel.grid.major = element_line(colour = "gray90", size = 0.5),
+    plot.margin = margin(20, 5, 20, 10),
+    axis.title.x = element_text(margin = margin(t = 5, r = -6, b = 0, l = 15), size = 9),
+    plot.title = element_text(hjust = 0.5),
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    legend.position = legend_position,
+    legend.title = element_blank() 
+  ) +
+  labs(
+    title = title_plot,
+    x = "",
+    y = ylab
+  ) +
+#  geom_text(aes(label = count), vjust = 0, hjust = 0, color = "black", size = 3.5) +
+  scale_fill_manual(values = colour_plot) +
+    coord_flip()
+   
+}
+
+density_plot1_pa <- density_plot(mydf = density_1_pa,
+                                 #parasite = count_names,
+                                 title_plot = "",
+                                 ylab = "Density of parasites of Chaetognatha (ind / 100m³)",
+                                 colour_plot = c( "deeppink4", "deeppink","purple", "cyan3","purple4"),
+                                 legend_position = "bottom",
+                                 limits_y = c(0,40),
+                                 breaks_y = c(0, 10, 20, 30, 40)) 
+density_plot1_pa
+
+density_plot2_pa <- density_plot(mydf = density_2_pa,
+                                 title_plot = "",
+                                 ylab = "Density of parasites of Chaetognatha (ind / 100m³)",
+                                 colour_plot = c( "deeppink4", "skyblue2", "lightpink", "black", "cyan4"),
+                                 legend_position = "bottom",
+                                 limits_y = c(0, 20),
+                                 breaks_y = c(0, 10, 20))
+
+density_plot2_pa
+
+density_plot3_pa <- density_plot(mydf = density_3_pa,
+                                 title_plot = "",
+                                 ylab = "Density of parasites of Chaetognatha (ind / 100m³)",
+                                 colour_plot = c( "deeppink4"),
+                                 legend_position = "bottom",
+                                 limits_y = c(0, 20),
+                                 breaks_y = c(0, 10, 20))
+
+density_plot3_pa
+```
+
+######### Relative species abundance para arctic
+
+```{r}
+
+rel_para<- function(mydf, event, loc_order) 
+  {mydf |>  
+  filter(sampling_event %in% event) |> #parasitized_chaetognaths > 0
+     pivot_longer(cols = c(derogenes_varicus, hemiurus_levinseni, diphyllobothrium_lanceolatum, diphyllobothrium_sp, hysterothylacium_aduncum, didymozoid_sp_indet, lecithaster_gibbosus, isopoda_sp_indet, ciliophora_sp_indet, gregarinasina_sp_indet, digenea_sp),
+               names_to = "parasite_species",
+               values_to = "count"
+               ) |> 
+     select(station, cruise, parasitized_chaetognaths, parasite_species, count) |>
+    mutate(count = as.numeric(count)) |> 
+    replace_na(list(count = 0))|> 
+  group_by(station) |>
+  mutate(
+    n = sum(count),
+    station = factor(station) ) |> 
+mutate(prevalence = as.numeric(count)/as.numeric(n),
+       prevalence = round(prevalence * 100, digits = 1),
+       percentage_label = paste0(round(prevalence, 1), "%")) |> 
+mutate(parasite_species = case_when(
+                        str_detect(parasite_species, "^hysterothylacium_aduncum") ~ "Hysterothylacium aduncum",
+                        str_detect(parasite_species, "^gregarinasina_sp_indet") ~ "Apicomplexa sp. indet. (gregarine-like)",
+                        str_detect(parasite_species, "^ciliophora_sp_indet") ~ "Ciliophora sp. indet.",
+                        str_detect(parasite_species, "^didymozoid_sp_indet") ~ "Didymozoidae sp. indet.",
+                        str_detect(parasite_species, "^diphyllobothrium_sp") ~ "Diphyllobothrium sp. indet.",
+                        str_detect(parasite_species, "^diphyllobothrium_lanceolatum") ~ "Diphyllobothrium lanceolatum",
+                        str_detect(parasite_species, "^derogenes_varicus") ~ "Derogenes varicus",
+                        str_detect(parasite_species, "^hemiurus_levinseni") ~ "Hemiurus levinseni",
+                        str_detect(parasite_species, "^lecithaster_gibbosus") ~ "Lecithaster gibbosus",
+                        str_detect(parasite_species, "^isopoda_sp_indet") ~ "Isopoda sp. indet.",
+                        str_detect(parasite_species, "^digenea_sp") ~ "Digenea sp. indet.",
+                        TRUE ~ parasite_species)) |> 
+  mutate(station = factor(station, 
+                            levels = loc_order), ordered = TRUE)
+
+}
+
+
+para_rel_3 <- rel_para(mydf = abundance,
+                                      loc_order = c("Kongsfjorden","Wijdefjorden", "Rijpfjorden"),
+                                     event = "3"
+                              )
+
+para_rel_2 <- rel_para(mydf = abundance,
+                                     loc_order = c("Prins Karls Forland", "Danskøya","Hinlopenstretet", "Kvitøya",
+                                                   "Nordaustlandet", "North of Spitsbergen"),
+                                    event = "2"
+                                   )
+  
+para_rel_1 <- rel_para(mydf = abundance,
+                                     loc_order = c( "Bleik Canyon","Porsangerfjorden", "Barents Sea", 
+                                            "Hornsund","Van Mijenfjorden",
+                                            "Billefjorden","Kongsfjorden","Krossfjorden"),
+                                    event = "1"
+                                    )
+
+```
+
+```{r}
+para_prev_plot <- function(mydf, title_plot, ylab, colour_plot, legend_position, limits_y, breaks_y)
+  {  ggplot(mydf, aes(x = station, y = prevalence, fill = parasite_species)) +
+    theme_minimal() +
+    geom_col() +
+    scale_y_continuous(limits = limits_y)+
+    theme(panel.grid.minor = element_blank(),
+            panel.grid.major = element_blank(),
+            axis.line.x = element_line(color = "white"),
+            axis.line.y = element_line(color = "white"),
+            plot.title = element_text(hjust = 0.5, color = "white"),
+            axis.text.x = element_text(angle = 45, hjust = 1, color = "white"),
+            axis.text.y = element_text(color = "white"),
+            axis.title.x = element_text(margin = margin(t = 5, r = -6, b = 0, l = 15), size = 9, color = "white"),
+            axis.title.y = element_text(color = "white"),
+            plot.margin = margin(20, 5, 20, 10),
+            legend.position = legend_position,
+            legend.title = element_blank(),
+            legend.text = element_text(color = "white")
+        ) +
+  labs(
+    title = title_plot,
+    x = "",
+    y = ylab
+  ) +
+#  geom_text(aes(label = count), vjust = 0, hjust = 0, color = "black", size = 3.5) +
+  scale_fill_manual(values = colour_plot) +
+    coord_flip()
+   
+}
+
+para_prev_1 <- para_prev_plot(mydf = para_prevalence_1,
+                                 #parasite = count_names,
+                                 title_plot = "Sampling event 1",
+                                 ylab = "Prevalence of parasites of Chaetognatha (%)",
+                                 colour_plot = c( "black", "black", "deeppink4", "deeppink", "black", "purple", "black", "cyan3", "purple4", "black", "black", "black", "black", "black"),
+                                 legend_position = "",
+                                 limits_y = c(0,105),
+                                # breaks_y = c(0, 10, 20, 30, 40)
+                              ) 
+para_prev_1
+
+para_prev_2 <- para_prev_plot(mydf = para_prevalence_2,
+                                 title_plot = "Sampling event 2",
+                                 ylab = "Prevalence of parasites of Chaetognatha (%)",
+                                 colour_plot = c( "black", "black","deeppink4", "black","skyblue2",  "black", "lightpink", "black", "black", "cyan4", "black", "black", "black"),
+                                 legend_position = "",
+                                 limits_y = c(0, 105)
+                                # breaks_y = c(0, 10, 20)
+                                )
+
+para_prev_2
+
+para_prev_3 <- para_prev_plot(mydf = para_prevalence_3,
+                                 title_plot = "Sampling event 3",
+                                 ylab = "Prevalence of parasites of Chaetognatha (%)",
+                                 colour_plot = c( "black", "black","deeppink4", "black","black","black","black", "black", "black", "black", "black", "black", "black"),
+                                 legend_position = "",
+                                 limits_y = c(0, 100)
+#                                 breaks_y = c(0, 10, 20)
+)
+
+para_prev_3
+```
+
+######### Prevalence
+
+```{r}
+prevalence_para<- function(mydf, event, loc_order) 
+  {mydf |>  
+  filter(sampling_event %in% event) |> #parasitized_chaetognaths > 0
+     pivot_longer(cols = c(derogenes_varicus, hemiurus_levinseni, diphyllobothrium_lanceolatum, diphyllobothrium_sp, hysterothylacium_aduncum, didymozoid_sp_indet, lecithaster_gibbosus, isopoda_sp_indet, ciliophora_sp_indet, gregarinasina_sp_indet, digenea_sp),
+               names_to = "parasite_species",
+               values_to = "count"
+               ) |> 
+     select(station, cruise, numbers_of_chaetognaths_checked, parasite_species, count) |>
+    mutate(count = as.numeric(count)) |> 
+    replace_na(list(count = 0))|> 
+  group_by(station) |>
+  mutate(
+    n = sum(count),
+    station = factor(station) ) |> 
+mutate(prevalence = as.numeric(count)/as.numeric(numbers_of_chaetognaths_checked),
+       prevalence = round(prevalence * 100, digits = 1),
+       percentage_label = paste0(round(prevalence, 1), "%")) |> 
+mutate(parasite_species = case_when(
+                        str_detect(parasite_species, "^hysterothylacium_aduncum") ~ "Hysterothylacium aduncum",
+                        str_detect(parasite_species, "^gregarinasina_sp_indet") ~ "Apicomplexa sp. indet. (gregarine-like)",
+                        str_detect(parasite_species, "^ciliophora_sp_indet") ~ "Ciliophora sp. indet.",
+                        str_detect(parasite_species, "^didymozoid_sp_indet") ~ "Didymozoidae sp. indet.",
+                        str_detect(parasite_species, "^diphyllobothrium_sp") ~ "Diphyllobothrium sp. indet.",
+                        str_detect(parasite_species, "^diphyllobothrium_lanceolatum") ~ "Diphyllobothrium lanceolatum",
+                        str_detect(parasite_species, "^derogenes_varicus") ~ "Derogenes varicus",
+                        str_detect(parasite_species, "^hemiurus_levinseni") ~ "Hemiurus levinseni",
+                        str_detect(parasite_species, "^lecithaster_gibbosus") ~ "Lecithaster gibbosus",
+                        str_detect(parasite_species, "^isopoda_sp_indet") ~ "Isopoda sp. indet.",
+                        str_detect(parasite_species, "^digenea_sp") ~ "Digenea sp. indet.",
+                        TRUE ~ parasite_species)) |> 
+  mutate(station = factor(station, 
+                            levels = loc_order), ordered = TRUE)
+
+}
+
+
+para_prevalence_3 <- prevalence_para(mydf = abundance,
+                                      loc_order = c("Kongsfjorden","Wijdefjorden", "Rijpfjorden"),
+                                     event = "3"
+                              )
+
+para_prevalence_2 <- prevalence_para(mydf = abundance,
+                                     loc_order = c("Prins Karls Forland", "Danskøya","Hinlopenstretet", "Kvitøya",
+                                                   "Nordaustlandet", "North of Spitsbergen"),
+                                    event = "2"
+                                   )
+  
+para_prevalence_1 <- prevalence_para(mydf = abundance,
+                                     loc_order = c( "Bleik Canyon","Porsangerfjorden", "Barents Sea", 
+                                            "Hornsund","Van Mijenfjorden",
+                                            "Billefjorden","Kongsfjorden","Krossfjorden"),
+                                    event = "1"
+                                    )
+```
+
+```{r}
+para_prevalence_3 |> 
+  drop_na() |> 
+  group_by(station, parasite_species) |> 
+  count(prevalence) |> 
+  mutate(prevalence_sum = n*prevalence)
+```
+
+```{r}
+para_prev_plot <- function(mydf, title_plot, ylab, colour_plot, legend_position, limits_y, breaks_y)
+  {  ggplot(mydf, aes(x = station, y = prevalence, fill = parasite_species)) +
+    theme_minimal() +
+    geom_col() +
+    scale_y_continuous(limits = limits_y)+
+ #   theme(
+#    panel.grid.minor = element_line(colour = "lightgray", size = 0.25),
+#    panel.grid.major = element_line(colour = "gray90", size = 0.5),
+#    plot.margin = margin(20, 5, 20, 10),
+#    axis.title.x = element_text(margin = margin(t = 5, r = -6, b = 0, l = 15), size = 9),
+#    plot.title = element_text(hjust = 0.5),
+#    axis.text.x = element_text(angle = 45, hjust = 1),
+#    legend.position = legend_position,
+#    legend.title = element_blank() 
+#  ) +
+    ### For a white theme for presentation
+  theme(panel.grid.minor = element_blank(),
+            panel.grid.major = element_blank(),
+            axis.line.x = element_line(color = "white"),
+            axis.line.y = element_line(color = "white"),
+            plot.title = element_text(hjust = 0.5, color = "white"),
+            axis.text.x = element_text(angle = 45, hjust = 1, color = "white"),
+            axis.text.y = element_text(color = "white"),
+            axis.title.x = element_text(margin = margin(t = 5, r = -6, b = 0, l = 15), size = 9, color = "white"),
+            axis.title.y = element_text(color = "white"),
+            plot.margin = margin(20, 5, 20, 10),
+            legend.position = legend_position,
+            legend.title = element_blank(),
+            legend.text = element_text(color = "white")
+        ) +
+     labs(
+    title = title_plot,
+    x = "",
+    y = ylab
+  ) +
+#  geom_text(aes(label = count), vjust = 0, hjust = 0, color = "black", size = 3.5) +
+  scale_fill_manual(values = colour_plot) +
+    coord_flip()
+   
+}
+
+para_prev_1 <- para_prev_plot(mydf = para_prevalence_1,
+                                 #parasite = count_names,
+                                 title_plot = "",
+                                 ylab = "Prevalence of parasites of Chaetognatha (%)",
+                                 colour_plot = c( "black", "black", "deeppink4", "deeppink", "black", "purple", "black", "cyan3", "purple4", "black", "black", "black", "black", "black"),
+                                 legend_position = "bottom",
+                                 limits_y = c(0,50),
+                                # breaks_y = c(0, 10, 20, 30, 40)
+                              ) 
+para_prev_1
+
+para_prev_2 <- para_prev_plot(mydf = para_prevalence_2,
+                                 title_plot = "",
+                                 ylab = "Prevalence of parasites of Chaetognatha (%)",
+                                 colour_plot = c( "black", "black","deeppink4", "black","skyblue2",  "black", "lightpink", "black", "black", "cyan4", "black", "black", "black"),
+                                 legend_position = "bottom",
+                                 limits_y = c(0, 50)
+                                # breaks_y = c(0, 10, 20)
+                                )
+
+para_prev_2
+
+para_prev_3 <- para_prev_plot(mydf = para_prevalence_3,
+                                 title_plot = "",
+                                 ylab = "Prevalence of parasites of Chaetognatha (%)",
+                                 colour_plot = c( "black", "black","deeppink4", "black","black","black","black", "black", "black", "black", "black", "black", "black"),
+                                 legend_position = "",
+                                 limits_y = c(0, 50)
+#                                 breaks_y = c(0, 10, 20)
+)
+
+para_prev_3
+```
+
+######### 2.2.3 Sampling depths sampling event 1
+
+```{r}
+multinet <- dynamics |>
+  filter(sampling_event == "1") |>
+ # select(parasitized_chaetognaths, cruise, sampling_depth, station, filtered_volume_1_2) |>
+  mutate(
+    cod_end_no = case_when(
+      endsWith(cod_end_no, "1") ~ "200m - 300m",
+      endsWith(cod_end_no, "2") ~ "100m - 200m",
+      endsWith(cod_end_no, "3") ~ "50m - 100m",
+      endsWith(cod_end_no, "4") ~ "20m - 50m",
+      endsWith(cod_end_no, "5") ~ "0m - 20m",
+      TRUE ~ cod_end_no
+    )
+  ) |> 
+   mutate(
+    filtered_volume_1_2 = as.numeric(filtered_volume_1_2),
+    numbers_of_chaetognaths_checked = as.numeric(numbers_of_chaetognaths_checked),
+    cruise = as.numeric(cruise)) |> 
+  group_by(cruise) |> 
+  mutate(
+    hemiurus_levinseni = as.numeric(hemiurus_levinseni)/numbers_of_chaetognaths_checked,
+    derogenes_varicus = as.numeric(derogenes_varicus)/numbers_of_chaetognaths_checked,
+    hysterothylacium_aduncum = as.numeric(hysterothylacium_aduncum)/numbers_of_chaetognaths_checked,
+    diphyllobothrium_lanceolatum = as.numeric(diphyllobothrium_lanceolatum)/numbers_of_chaetognaths_checked,
+    didymozoid_sp_indet = as.numeric(didymozoid_sp_indet)/numbers_of_chaetognaths_checked,
+    station = factor(station) ) |> 
+  mutate(
+    filtered_volume_1_2 = round(filtered_volume_1_2, digits = 1),
+    derogenes_varicus = round(derogenes_varicus * 100, digits = 1),
+    hemiurus_levinseni = round(hemiurus_levinseni * 100, digits = 1),
+    hysterothylacium_aduncum = round(hysterothylacium_aduncum * 100, digits = 1),
+    diphyllobothrium_lanceolatum = round(diphyllobothrium_lanceolatum * 100, digits = 1),
+    didymozoid_sp_indet = round(didymozoid_sp_indet * 100, digits = 1)
+    )|> 
+   pivot_longer(cols = c(derogenes_varicus, hemiurus_levinseni, diphyllobothrium_lanceolatum, hysterothylacium_aduncum, didymozoid_sp_indet),
+               names_to = "parasites_species",
+               values_to = "density"
+               ) |> 
+  mutate(parasites_species = case_when(
+                        str_detect(parasites_species, "^derogenes_varicus") ~ "Derogenes varicus",
+                        str_detect(parasites_species, "^hemiurus_levinseni") ~ "Hemiurus levinseni",
+                        str_detect(parasites_species, "^hysterothylacium_aduncum") ~ "Hysterothylacium aduncum",
+                        str_detect(parasites_species, "^diphyllobothrium_lanceolatum") ~ "Diphyllobothrium lanceolatum",
+                        str_detect(parasites_species, "^didymozoid_sp_indet") ~ "Didymozoidae sp. indet",
+                        TRUE ~ parasites_species)) |> 
+  mutate(cod_end_no = factor(cod_end_no, 
+                            levels = c("200m - 300m", "100m - 200m", "50m - 100m", "20m - 50m", "0m - 20m")),ordered = TRUE) |> 
+  replace_na(list(density = 0))
+
+multinet  
+  
+  
+```
+
+```{r}
+multinet_plot<- ggplot(multinet, aes(x = cod_end_no, y = density, fill = parasites_species)) +
+    theme_minimal() +
+    geom_col() +
+  scale_y_continuous(limits = c(0, 45), breaks = c(0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50))+
+   guides(fill = guide_legend(nrow = 2)) +
+    theme(
+    panel.grid.minor = element_line(colour = "lightgray", size = 0.25),
+    panel.grid.major = element_line(colour = "gray90", size = 0.5),
+    plot.margin = margin(20, 5, 20, 10),
+    axis.title.x = element_text(margin = margin(t = 5, r = -6, b = 0, l = 15), size = 9),
+    plot.title = element_text(hjust = 0.5),
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    legend.position = "bottom",
+    legend.title = element_blank() 
+  ) +
+  labs(
+    title = "",
+    x = "",
+    y = "Prevalence (%) of parasites in multinet in August 2022"
+  ) +
+  coord_flip() +
+#  geom_text(aes(label = count), vjust = 0, hjust = 0, color = "black", size = 3.5) +
+ scale_fill_manual(values = c("deeppink4", "deeppink","purple", "cyan3","purple4" ))
+  
+   
+multinet_plot
+
+```
+
+# 3. Intensity & Coinfection
+
+-   only for Arctic samples (1, 2, 3)
+
+##### Mean and median of intensity
+
+```{r}
+parasites_intensity <- data_chaetognaths |> 
+ # mutate(quantity_of_organisms_number = as.numeric(quantity_of_organisms_number), quantity_of_organisms_number_2 = as.character(quantity_of_organisms_number)) |> 
+  filter(quantity_of_organisms_number >= "1", sampling_event %in% c("Sampling event 1", "Sampling event 2", "Sampling event 3"), !sampling_gear == "multinet 180 µm", !quantity_of_organisms_number %in% c("several", "uncountable") )|> 
+  #filter(locality == "Wijdfjorden") |> 
+  group_by( sampling_event, quantity_of_organisms_number, species) |> # locality, station_number_original
+  count(quantity_of_organisms_number)
+  
+parasites_intensity
+```
+
+```{r}
+mean_intensity <- function(mydf, event)
+{  mydf |> 
+  filter(sampling_event %in% event, !sampling_gear == "multinet 180 µm", quantity_of_organisms_number %in% c("1") ) |> #several, uncountable
+  mutate(mean = mean(as.numeric(quantity_of_organisms_number)),
+         ci_lower = mean(as.numeric(quantity_of_organisms_number), na.rm = TRUE) - 
+           qt(0.975, df = n() - 1) * sd(as.numeric(quantity_of_organisms_number), na.rm = TRUE) / sqrt(n()),
+         ci_upper = mean(as.numeric(quantity_of_organisms_number), na.rm = TRUE) +
+           qt(0.975, df = n() - 1) * sd(as.numeric(quantity_of_organisms_number), na.rm = TRUE) / sqrt(n())
+         )|> 
+  summarise(mean, species, ci_lower, ci_upper)
+  }
+
+intensity1 <- mean_intensity(mydf = data_chaetognaths,
+                             event = c("1"))
+intensity1
+
+intensity2 <- mean_intensity(mydf = data_chaetognaths,
+                             event = c("2"))
+intensity2
+
+intensity3 <- mean_intensity(mydf = data_chaetognaths,
+                             event = c("3"))
+intensity3
+```
+
+```{r}
+median_intensity <- function(mydf, event)
+{  mydf |> 
+  filter(sampling_event %in% event, !sampling_gear == "multinet 180 µm", !quantity_of_organisms_number %in% c("several", "uncountable") ) |> 
+  mutate(median = median(as.numeric(quantity_of_organisms_number)),
+         ci_lower = median(as.numeric(quantity_of_organisms_number), na.rm = TRUE) - 
+           qt(0.975, df = n() - 1) * sd(as.numeric(quantity_of_organisms_number), na.rm = TRUE) / sqrt(n()),
+         ci_upper = median(as.numeric(quantity_of_organisms_number), na.rm = TRUE) +
+           qt(0.975, df = n() - 1) * sd(as.numeric(quantity_of_organisms_number), na.rm = TRUE) / sqrt(n())
+         )|> 
+  summarise(median, species, ci_lower, ci_upper)
+  }
+
+intensity1 <- median_intensity(mydf = data_chaetognaths,
+                             event = c("Sampling event 1"))
+intensity1
+
+intensity2 <- median_intensity(mydf = data_chaetognaths,
+                             event = c("Sampling event 2"))
+intensity2
+
+intensity3 <- median_intensity(mydf = data_chaetognaths,
+                             event = c("Sampling event 3"))
+intensity3
+```
+
+```{r}
+#median korsfjord faanfjord
+
+median(c(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 3))
+```
+
+```{r}
+data_chaetognaths |> 
+  filter(sampling_event %in% "4", species %in% c("Gregarinasina sp indet", "Ciliophora sp indet")) |> 
+  count(species) 
+  
+```
+
+```{r}
+# all 1 in arctic
+data_chaetognaths |> 
+filter(sampling_event %in% "3",  quantity_of_organisms_number %in% c("1"), state_province_county == "Svalbard" ) |> #sampling_gear == "multinet 180 µm",
+  count(species)
+```
+
+##### Bar plot for intensity (neccessary?)
+
+```{r}
+blubb<- dynamics |> 
+  filter(!parasitized_chaetognaths == "0", station %in% c("Wijdfjord", "Van Mijenfjord", "north of Nordaustlandet", "Krossfjord", "Kongsfjord", "Hornsund", "Billefjord"), !sampling == "UNIS September 2024 Kongsfjord") |>
+  group_by(station, sampling, sampling_event) |>
+  mutate(count_total = numbers_of_chaetognaths_checked,
+          count_parasitized = parasitized_chaetognaths#,
+         # station = factor(station)
+          )  |> 
+  summarise(count_total = sum(as.numeric(numbers_of_chaetognaths_checked), na.rm = TRUE),
+            count_parasitized = sum(as.numeric(parasitized_chaetognaths), na.rm = TRUE) 
+            ) |> 
+  ungroup() |> 
+   mutate(count_coinfected = as.numeric(c("2", "2", "1", "2", "1", "28", "1"))) |> 
+  pivot_longer(cols = c(count_total, count_parasitized, count_coinfected),
+               names_to = "count_names",
+               values_to = "count"
+               ) |> 
+  mutate(count_names = case_when(
+                        str_detect(count_names, "^count_total") ~ "Total Chaetognatha examined for parasitism",
+                        str_detect(count_names, "^count_parasitized") ~ "Parasitized Chaetognatha",
+                        str_detect(count_names, "^count_coinfected") ~ "Coinfected Chaetognatha",
+                        TRUE ~ count_names)) |> 
+   mutate(station = case_when(
+    str_detect(station, "^Billefjord") ~ "Billefjord (BF)",
+    str_detect(station, "^Bleik canyon") ~ "Bleik Canyon (BC)",
+    str_detect(station, "^Kongsfjord") ~ "Kongsfjord (KF)",
+    str_detect(station, "^Krossfjord") ~ "Krossfjord (KRO)",
+    str_detect(station, "^Porsangerfjord") ~ "Porsangerfjord (PF 1-3)",
+    str_detect(station, "^Van Mijenfjord") ~ "Van Mijenfjord (VM)",
+    str_detect(station, "^Hornsund") ~ "Hornsund (HS)",
+    str_detect(station, "^west of Prins Karls Forland") ~ "Prins Karls Forland",
+    str_detect(station, "^north of Nordaustlandet") ~ "Nordaustlandet (NL)",
+    str_detect(station, "^north of Spitsbergen") ~ "North of Spitsbergen",
+    str_detect(station, "^mouth of Hinlopenstretet") ~ "Mouth of Hinlopenstretet",
+    str_detect(station, "^north of Hinlopenstretet") ~ "North of Hinlopenstretet",
+    str_detect(station, "^west of Danskøya") ~ "Danskøya",
+    str_detect(station, "^Wijdfjord") ~ "Wijdfjord (WF)",
+    TRUE ~ station
+    ) ) |> 
+ mutate(station = factor(station, 
+                           levels = c("Hornsund (HS)",  "Van Mijenfjord (VM)",  "Billefjord (BF)", "Wijdfjord (WF)", "Kongsfjord (KF)", "Krossfjord (KRO)","Nordaustlandet (NL)")))
+ blubb 
+```
+
+Coinfection in those parasites:
+
+Billefjord 2 locations: CP7-1, CP9-5 Hornsund 1: CP15-3, CP15-1 Kongsfjord 1: CP3-4 Krossfjord 2: CP1-3, CP2-4 Van Mijenfjord 1: CP12-3 Nordaustlandet 1: 281
+
+Case 2: every single number has a different coordinate Case 1: CP15-3 and CP15-1 have the same coordinate (just different when the numbers change after CP)
+
+```{r}
+## one intensity plot with all parasites in the fjord
+coinfection_overview <- ggplot(data = blubb, aes(x = station, fill = count_names)) +
+    geom_col(aes(y = count), width = 0.8, position = position_dodge(width = 0.9)) +
+    scale_fill_manual(values = c( "darkorange2","orange2", "burlywood1")) +
+    theme_minimal() +
+    scale_y_continuous(limits = c(0, 200)) +
+    theme(
+      legend.position = "bottom", 
+      legend.title = element_blank(),
+      panel.grid.minor = element_line(colour = "lightgray", size = 0.25),
+      panel.grid.major = element_line(colour = "gray90", size = 0.5),
+      plot.margin = margin(20, 5, 20, 10),
+      axis.title.x = element_text(margin = margin(t = 5, r = -6, b = 0, l = 15), size = 9),
+      plot.title = element_text(hjust = 0),
+      axis.text.x = element_text(hjust = 0.5)
+    ) +
+    labs(
+      title = "",
+      x = "",
+      y = "Parasitized Chaetognatha in Arctic 2022-2024"
+    ) +
+    geom_text(aes(y = count, label = count, 
+              group = count),
+               position = position_dodge(width = 0.9),
+              vjust = 0.3, 
+              hjust = 0, 
+              color = "black", 
+              size = 3.5) +
+coord_flip() +
+  guides(fill = guide_legend(nrow = 2, byrow = TRUE))
+coinfection_overview
+    
+```
+
+```{r}
+combine_coinfection <- coinfection_map + coinfection_overview + plot_layout(ncol = 2)
+combine_coinfection
+```
+
+```{r}
+ggplot(data = blubb, aes(x = station, fill = species)) +
+    geom_col(aes(y = quantity_of_organisms_number), width = 0.8, position = position_dodge(width = 0.9)) +
+    #scale_fill_manual(values = colour_fill) +
+    theme_minimal() +
+        #scale_y_continuous(limits = limits_y) +
+    theme(
+      legend.position = "bottom", 
+      legend.title = element_blank(),
+      panel.grid.minor = element_line(colour = "lightgray", size = 0.25),
+      panel.grid.major = element_line(colour = "gray90", size = 0.5),
+      plot.margin = margin(20, 5, 20, 10),
+      axis.title.x = element_text(margin = margin(t = 5, r = -6, b = 0, l = 15), size = 9),
+      plot.title = element_text(hjust = 0),
+      axis.text.x = element_text(hjust = 0.5)
+    ) +
+    labs(
+      title = "",
+      x = "",
+      y = "Intensity in Arctic 2022-2024"
+    ) +
+    geom_text(aes(y = quantity_of_organisms_number, label = n, 
+              group = quantity_of_organisms_number),
+               position = position_dodge(width = 0.9),
+              vjust = 0.3, 
+              hjust = 0, 
+              color = "black", 
+              size = 3.5) +
+coord_flip() 
+    
+```
+
+# 4. GG save
+
+```{r}
+# Right sizes for case 3 seasonal dynamic plots
+ggsave(here("output", "prevalence_plotko24.png"), plot = prevalence_plotko24, width = 140, height = 100, units = "mm", scale = 1.1)
+```
+
+```{r}
+# Case 3 pie chart
+ggsave(here("output", "multinet_plot.png"), plot = multinet_plot, width = 160, height = 120, units = "mm", scale = 1.2)
+
+#Parasite prevalence and density in Arctic:  width = 100, height = 160, units = "mm", scale = 1.2)
+
+```
+
+```{r}
+ggsave(here("output", "sanky_plot_bignumbers_without_labels.svg"), plot = sankey, width = 200, height = 250, units = "mm", scale = 1.2)
+
+```

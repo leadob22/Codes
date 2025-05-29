@@ -1,0 +1,1996 @@
+---
+title: "CTD data"
+format: html
+editor: visual
+---
+
+# CTD data
+
+```{r}
+library(tidyverse)
+library(readxl)
+library(here)
+library(oce)
+library(gsw)
+library(ggrepel)
+
+here::here()
+```
+
+#### 1. Kors-&Fanafjord 2023-2024
+
+```{r}
+#Read in excel sheets
+#### Check each file for salinity! sometime there is measurement outside the water!
+
+jan_2024_data <- read_excel(here::here(
+    "data/CTD/Korsfjord_2024/January_2024_Korsfjord.xlsx"),
+    sheet = "Data",
+    skip = 1)|> 
+     janitor::clean_names() |> 
+    drop_na() |> 
+  filter(depth >= 2) |>
+     slice(1:which.max(depth >= 660))
+feb_2024_data <- read_excel(here::here(
+    "data/CTD/Korsfjord_2024/February_2024_Korsfjord.xlsx"),
+    sheet = "Data",
+    skip = 1)|> 
+     janitor::clean_names() |> 
+     drop_na() |> 
+  filter(depth >= 2) |>
+     slice(1:which.max(depth >= 666))
+mar_2024_data <- read_excel(here::here(
+    "data/CTD/Korsfjord_2024/March_2024_Korsfjord.xlsx"),
+    sheet = "Data",
+    skip = 1)|> 
+     janitor::clean_names() |> 
+     drop_na() |> 
+  filter(depth >= 2) |>
+     slice(1:which.max(depth >= 666))
+april_2024_data <- read_excel(here::here(
+    "data/CTD/Korsfjord_2024/April_2024_Korsfjord.xlsx"),
+    sheet = "Data",
+    skip = 1)|> 
+     janitor::clean_names() |> 
+     drop_na() |> 
+  filter(depth >= 2) |>
+     slice(1:which.max(depth >= 667))
+june_2024_data <- read_excel(here::here(
+    "data/CTD/Korsfjord_2024/June_2024_Korsfjord.xlsx"),
+    sheet = "Data",
+    skip = 1)|> 
+     janitor::clean_names() |> 
+     drop_na() |> 
+  filter(depth >= 2) |>
+     slice(1:which.max(depth >= 652))
+
+sep_2024_data <- read_excel(here::here(
+    "data/CTD/Korsfjord_2024/September_2024_Korsfjord.xlsx"),
+    sheet = "Data",
+    skip = 1)|> 
+    janitor::clean_names() |> 
+     drop_na() |> 
+  filter(depth >= 4) |>
+     slice(1:which.max(depth >= 662))
+
+oct_2024_data <- read_excel(here::here(
+    "data/CTD/Korsfjord_2024/October_2024_Korsfjord.xlsx"),
+    sheet = "Data",
+    skip = 1)|> 
+  janitor::clean_names() |> 
+  drop_na() |> 
+  filter(depth >= 2) |>
+  slice(1:which.max(depth >= 662))
+nov_2024_data <- read_excel(here::here(
+    "data/CTD/Korsfjord_2024/November_2024_Korsfjord.xlsx"),
+    sheet = "Data",
+    skip = 1)|> 
+     janitor::clean_names() |> 
+      drop_na() |> 
+  filter(depth >= 2) |>
+     slice(1:which.max(depth >= 662))
+
+
+
+aug_2024_data <- read_excel(here::here(
+    "data/CTD/Korsfjord_2024/August_2024_Korsfjord.xlsx"),
+    skip = 6) |> 
+     janitor::clean_names() |> 
+     drop_na() |> 
+  rename( salinity = sal, temperature_3 = temp, dissolved_o2_saturation = ox_percent, depth = press) |> 
+  filter(depth >= 2) |>
+     slice(1:which.max(depth >= 660))
+  
+
+dec_2024_data <- read_excel(here::here(
+    "data/CTD/Korsfjord_2024/December_2024_Korsfjord.xlsx"),
+    skip = 6) |> 
+     janitor::clean_names() |> 
+     drop_na() |> 
+  rename( salinity = sal, temperature_3 = temp, dissolved_o2_saturation = ox_percent, depth = press) |> 
+  filter(depth >= 2) 
+jul_2024_data <- read_excel(here::here(
+    "data/CTD/Korsfjord_2024/July_2024_Korsfjord.xlsx"),
+    skip = 6)|> 
+     janitor::clean_names() |> 
+     drop_na() |> 
+  rename( salinity = sal, temperature_3 = temp, dissolved_o2_saturation = ox_percent, depth = press) |> 
+  filter(depth >= 2)
+may_2024_data <- read_excel(here::here(
+    "data/CTD/Korsfjord_2024/May_2024_Korsfjord.xlsx"),
+     skip = 6)|> 
+     janitor::clean_names() |> 
+     drop_na() |> 
+  rename( salinity = sal, temperature_3 = temp, dissolved_o2_saturation = ox_percent, depth = press) |> 
+  filter(depth >= 2) |>
+     slice(1:which.max(depth >= 660)) 
+```
+
+```{r}
+# Read in data for fjords in one singel excel sheet  
+# slice_tail(n = 5)
+
+sep_2023ko_data <- read_excel(here::here(
+    "data/CTD/Korsfjord_Fanafjord_2023/09_Korsfjord_Fanafjord_September.xlsx"),
+    sheet = "Data",
+    skip = 1)|> 
+  slice(-(1:3785)) |> 
+     janitor::clean_names() |> 
+    drop_na() |> 
+  filter(depth >= 2) |>
+     slice(1:which.max(depth >= 650))
+
+sep_2023fa_data <- read_excel(here::here(
+    "data/CTD/Korsfjord_Fanafjord_2023/09_Korsfjord_Fanafjord_September.xlsx"),
+    sheet = "Data",
+    skip = 1,
+    n_max = 3786)|> 
+     janitor::clean_names() |> 
+      drop_na() |> 
+  filter(depth >= 2) |>
+     slice(1:which.max(depth >= 138))
+
+mar_2023ko_data <- read_excel(here::here(
+    "data/CTD/Korsfjord_Fanafjord_2023/03_Korsfjord_Fanafjord_March.xlsx"),
+    sheet = "Data",
+    skip = 1,
+    n_max = 15064)|> 
+     janitor::clean_names() |> 
+    drop_na() |> 
+  filter(depth >= 2) |>
+     slice(1:which.max(depth >= 650))
+
+mar_2023fa_data <- read_excel(here::here(
+    "data/CTD/Korsfjord_Fanafjord_2023/03_Korsfjord_Fanafjord_March.xlsx"),
+    sheet = "Data",
+    skip = 1
+    )|> 
+   slice(-(1:15059)) |> 
+     janitor::clean_names() |> 
+    drop_na() |> 
+  filter(depth >= 2) |>
+     slice(1:which.max(depth >= 131))
+
+june_2023ko_data <- read_excel(here::here(
+    "data/CTD/Korsfjord_Fanafjord_2023/06_Korsfjord_Fanafjord_June.xlsx"),
+   sheet = "Data",
+    skip = 1)|> #23533
+  slice(-(1:6669)) |> 
+     janitor::clean_names() |> 
+    drop_na() |> 
+  filter(depth >= 2) |>
+     slice(1:which.max(depth >= 650))
+
+# Salinity weird for Fana (TRUE)
+
+june_2023fa_data <- read_excel(here::here(
+    "data/CTD/Korsfjord_Fanafjord_2023/06_Korsfjord_Fanafjord_June.xlsx"),
+    sheet = "Data",
+       skip = 1 )|> 
+  janitor::clean_names() |> 
+  filter(depth >= 2)  |>
+     slice(1:which.max(depth >= 148)) |> 
+   drop_na()
+
+
+jul_2023ko_data <- read_excel(here::here(
+    "data/CTD/Korsfjord_Fanafjord_2023/07_Korsfjord_Fanafjord_July.xlsx"),
+    sheet = "Data",
+    skip = 1)|> 
+   slice(-(1:4989)) |> 
+     janitor::clean_names() |> 
+    drop_na() |> 
+  filter(depth >= 2) |>
+     slice(1:which.max(depth >= 650))
+
+jul_2023fa_data <- read_excel(here::here(
+    "data/CTD/Korsfjord_Fanafjord_2023/07_Korsfjord_Fanafjord_July.xlsx"),
+    sheet = "Data",
+    skip = 1,
+    n_max = 4990)|> 
+     janitor::clean_names() |> 
+    drop_na() |> 
+  filter(depth >= 2) |>
+     slice(1:which.max(depth >= 120))
+
+oct_2023ko_data <- read_excel(here::here(
+    "data/CTD/Korsfjord_Fanafjord_2023/10_Korsfjord_Fanafjord_October.xlsx"),
+   sheet = "Data",
+    skip = 1,
+    n_max = 14985)|> 
+     janitor::clean_names() |> 
+    drop_na() |> 
+  filter(depth >= 2) |>
+     slice(1:which.max(depth >= 650))
+
+oct_2023fa_data <- read_excel(here::here(
+    "data/CTD/Korsfjord_Fanafjord_2023/10_Korsfjord_Fanafjord_October.xlsx"),
+    sheet = "Data",
+       skip = 1 )|> 
+  slice(-(1:14984)) |> 
+     janitor::clean_names() |> 
+    drop_na() |> 
+  filter(depth >= 2) |>
+     slice(1:which.max(depth >= 125))
+
+nov_2023ko_data <- read_excel(here::here(
+    "data/CTD/Korsfjord_Fanafjord_2023/11_Korsfjord_Fanafjord_November.xlsx"),
+   sheet = "Data",
+    skip = 1,
+    n_max = 34115)|> 
+     janitor::clean_names() |> 
+    drop_na() |> 
+  filter(depth >= 2) |>
+     slice(1:which.max(depth >= 650))
+
+nov_2023fa_data <- read_excel(here::here(
+    "data/CTD/Korsfjord_Fanafjord_2023/11_Korsfjord_Fanafjord_November.xlsx"),
+    sheet = "Data",
+       skip = 1 )|> 
+     slice(-(1:38031)) |> 
+     janitor::clean_names() |> 
+    drop_na() |> 
+  filter(depth >= 2) |>
+     slice(1:which.max(depth >= 135))
+
+dec_2023ko_data <- read_excel(here::here(
+    "data/CTD/Korsfjord_Fanafjord_2023/12_Korsfjord_Fanafjord_December.xlsx"),
+    sheet = "Data",
+    skip = 1,
+    n_max = 17147)|> 
+     slice(-(1:5537)) |> 
+     janitor::clean_names() |> 
+    drop_na()|> 
+  filter(depth >= 2) |>
+     slice(1:which.max(depth >= 650))
+
+
+dec_2023fa_data <- read_excel(here::here(
+    "data/CTD/Korsfjord_Fanafjord_2023/12_Korsfjord_Fanafjord_December.xlsx"),
+    sheet = "Data",
+    skip = 1,
+    n_max = 5536)|> 
+     janitor::clean_names() |> 
+    drop_na() |> 
+  filter(depth >= 2) |>
+     slice(1:which.max(depth >= 135))
+
+# Fanafjord & Korsfjord 2023
+
+jan_2023fa_data <- read_excel(here::here(
+    "data/CTD/Korsfjord_Fanafjord_2023/01_Fanafjord_January.xlsx"),
+    sheet = "Data",
+    skip = 1,
+    n_max = 3690)|> 
+     janitor::clean_names() |> 
+    drop_na() |> 
+  filter(depth >= 2) |>
+     slice(1:which.max(depth >= 110))
+
+jan_2023ko_data <- read_excel(here::here(
+    "data/CTD/Korsfjord_Fanafjord_2023/01_Korsfjord_January.xlsx"),
+    skip = 6) |> 
+     janitor::clean_names() |> 
+    drop_na() |> 
+  rename( salinity = sal, temperature_3 = temp, dissolved_o2_saturation = ox_percent, depth = press) |> 
+  filter(depth >= 2) 
+
+
+feb_2023ko_data <- read_excel(here::here(
+    "data/CTD/Korsfjord_Fanafjord_2023/02_Korsfjord_February.xlsx"),
+    skip = 6) |> 
+     janitor::clean_names() |> 
+      rename( salinity = sal, temperature_3 = temp, dissolved_o2_saturation = ox_percent, depth = press) |> 
+  drop_na()
+april_2023fa_data <- read_excel(here::here(
+    "data/CTD/Korsfjord_Fanafjord_2023/04_Fanafjord_April.xlsx"),
+    skip = 6) |> 
+     janitor::clean_names() |> 
+    drop_na() |> 
+  rename( salinity = sal, temperature_3 = temp, dissolved_o2_saturation = ox_percent, depth = press) 
+
+
+april_2023ko_data <- read_excel(here::here(
+    "data/CTD/Korsfjord_Fanafjord_2023/04_Korsfjord_April.xlsx"),
+    skip = 6) |> 
+     janitor::clean_names() |> 
+    drop_na() |> 
+  rename( salinity = sal, temperature_3 = temp, dissolved_o2_saturation = ox_percent, depth = press)
+
+
+### Missing oxygen values for May
+may_2023fa_data <- read_excel(here::here(
+    "data/CTD/Korsfjord_Fanafjord_2023/05_Fanafjord_May.xlsx"),
+    skip = 2) |> 
+     janitor::clean_names() |> 
+    drop_na() |> 
+  rename( salinity = salinity_practical_psu, temperature_3 = temperature_its_68_deg_c, depth = pressure_digiquartz_db_primaryvar) |> drop_na() |> 
+  filter(depth >= 2) |> 
+  mutate(dissolved_o2_saturation = 0)
+
+
+may_2023ko_data <- read_excel(here::here(
+    "data/CTD/Korsfjord_Fanafjord_2023/05_Korsfjord_May.xlsx"),
+    skip = 2) |> 
+     janitor::clean_names() |> 
+    drop_na() |> 
+  rename( salinity = salinity_practical_psu, temperature_3 = temperature_its_68_deg_c, depth = pressure_digiquartz_db_primaryvar) |> 
+  mutate(dissolved_o2_saturation = 0)
+
+
+aug_2023fa_data <- read_excel(here::here(
+    "data/CTD/Korsfjord_Fanafjord_2023/08_Fanafjord_August.xlsx"),
+    skip = 6) |> 
+     janitor::clean_names() |> 
+    drop_na() |> 
+  rename( salinity = cond, temperature_3 = temp, dissolved_o2_saturation = ox_percent, depth = press) |> 
+    filter(depth >= 2)
+
+
+aug_2023ko_data <- read_excel(here::here(
+    "data/CTD/Korsfjord_Fanafjord_2023/08_Korsfjord_August.xlsx"),
+    skip = 6) |> 
+     janitor::clean_names() |> 
+    drop_na() |> 
+  rename( salinity = sal, temperature_3 = temp, dissolved_o2_saturation = ox_percent, depth = press) 
+
+```
+
+```{r}
+june_2023fa_oxygen <- read_excel(here::here(
+    "data/CTD/Korsfjord_Fanafjord_2023/June_Korsfjord_2023_salinity.xlsx"),
+    n_max = 2557) |> 
+     janitor::clean_names() #|> 
+#slice(-(1:170) ) 
+#  summarise(
+#    dissolved_o2_saturation = mean(salinity, na.rm = TRUE),
+#    ci_lower_oxy = mean(salinity, na.rm = TRUE) - 
+#      qt(0.975, df = n() - 1) * sd(salinity, na.rm = TRUE) / sqrt(n()),
+#    ci_upper_oxy = mean(salinity, na.rm = TRUE) +
+ #     qt(0.975, df = n() - 1) * sd(salinity, na.rm = TRUE) / sqrt(n())
+  #)
+  
+#23536
+#slice_tail(june_2023fa_data, n = 1000)
+june_2023fa_oxygen
+
+june_2023fa_data_com<- cbind(june_2023fa_oxygen, june_2023fa_data)
+
+june_2023fa_data_com
+
+```
+
+#### CTD depth profile
+
+```{r}
+#function for excel sheets
+
+sampling_event_3 <- function(mydf, month_info, fjord_info, year_info, sampling)
+{   mydf|> 
+#  summarise(
+#  mean_temperature = mean(temperature_3, na.rm = TRUE),
+#    ci_lower_temp = mean(temperature_3, na.rm = TRUE) - 
+#      qt(0.975, df = n() - 1) * sd(temperature_3, na.rm = TRUE) / sqrt(n()),
+#    ci_upper_temp = mean(temperature_3, na.rm = TRUE) +
+#      qt(0.975, df = n() - 1) * sd(temperature_3, na.rm = TRUE) / sqrt(n()),
+#  mean_oxygen = mean(dissolved_o2_saturation, na.rm = TRUE),
+#    ci_lower_oxy = mean(dissolved_o2_saturation, na.rm = TRUE) - 
+#      qt(0.975, df = n() - 1) * sd(dissolved_o2_saturation, na.rm = TRUE) / sqrt(n()),
+#    ci_upper_oxy = mean(dissolved_o2_saturation, na.rm = TRUE) +
+#      qt(0.975, df = n() - 1) * sd(dissolved_o2_saturation, na.rm = TRUE) / sqrt(n()),
+#  mean_salinity = mean(salinity, na.rm = TRUE),
+#    ci_lower_sal = mean(salinity, na.rm = TRUE) - 
+#      qt(0.975, df = n() - 1) * sd(salinity, na.rm = TRUE) / sqrt(n()),
+#    ci_upper_sal = mean(salinity, na.rm = TRUE) +
+#      qt(0.975, df = n() - 1) * sd(salinity, na.rm = TRUE) / sqrt(n())
+#  ) |> 
+  mutate(month = month_info, location = fjord_info, year = year_info, sampling_trip = sampling) |> 
+    group_by(location, month, year, sampling_trip)
+}
+  
+  
+```
+
+```{r}
+#Final table
+jan_24 <- sampling_event_3(mydf = jan_2024_data,
+               month_info = "January",
+               fjord_info = "Korsfjord",
+               year_info = "2024",
+               sampling = "Parazoo January 2024 Korsfjord"
+               )
+
+feb_24 <- sampling_event_3(mydf = feb_2024_data,
+               month_info = "February",
+               fjord_info = "Korsfjord",
+               year_info = "2024",
+               sampling = "Parazoo February 2024 Korsfjord"
+               )
+mar_24 <- sampling_event_3(mydf = mar_2024_data,
+               month_info = "March",
+               fjord_info = "Korsfjord",
+               year_info = "2024",
+               sampling = "Parazoo March 2024 Korsfjord"
+               )
+april_24 <- sampling_event_3(mydf = april_2024_data,
+               month_info = "April",
+               fjord_info = "Korsfjord",
+               year_info = "2024",
+               sampling = "Parazoo April 2024 Korsfjord"
+               )
+may_24 <- sampling_event_3(mydf = may_2024_data,
+               month_info = "May",
+               fjord_info = "Korsfjord",
+               year_info = "2024",
+               sampling = "Parazoo May 2024 Korsfjord"
+               )
+jun_24 <- sampling_event_3(mydf = june_2024_data,
+               month_info = "June",
+               fjord_info = "Korsfjord",
+               year_info = "2024",
+               sampling = "Parazoo June 2024 Korsfjord"
+               )
+jul_24 <- sampling_event_3(mydf = jul_2024_data,
+               month_info = "July",
+               fjord_info = "Korsfjord",
+               year_info = "2024",
+               sampling = "Parazoo July 2024 Korsfjord"
+               )
+aug_24 <- sampling_event_3(mydf = aug_2024_data,
+               month_info = "August",
+               fjord_info = "Korsfjord",
+               year_info = "2024",
+               sampling = "Parazoo August 2024 Korsfjord"
+               )
+sep_24 <- sampling_event_3(mydf = sep_2024_data,
+               month_info = "September",
+               fjord_info = "Korsfjord",
+               year_info = "2024",
+               sampling = "Parazoo September 2024 Korsfjord"
+               )
+oct_24 <- sampling_event_3(mydf = oct_2024_data,
+               month_info = "October",
+               fjord_info = "Korsfjord",
+               year_info = "2024",
+               sampling = "Parazoo October 2024 Korsfjord"
+               )
+nov_24 <- sampling_event_3(mydf = nov_2024_data,
+               month_info = "November",
+               fjord_info = "Korsfjord",
+               year_info = "2024",
+               sampling = "Parazoo November 2024 Korsfjord"
+               )
+dec_24 <- sampling_event_3(mydf = dec_2024_data,
+               month_info = "December",
+               fjord_info = "Korsfjord",
+               year_info = "2024",
+               sampling = "Parazoo December 2024 Korsfjord"
+               )
+## Korsfjord and Fanafjord 2023
+
+jan_fa23 <- sampling_event_3(mydf = jan_2023fa_data,
+               month_info = "January",
+               fjord_info = "Fanafjord",
+               year_info = "2023",
+               sampling = "Parazoo January 2023 Fanafjord"
+               )
+jan_ko23 <- sampling_event_3(mydf = jan_2023ko_data,
+               month_info = "January",
+               fjord_info = "Korsfjord",
+               year_info = "2023",
+               sampling = "Parazoo January 2023 Korsfjord"
+               )
+
+feb_ko23 <- sampling_event_3(mydf = feb_2023ko_data,
+               month_info = "February",
+               fjord_info = "Korsfjord",
+               year_info = "2023",
+               sampling = "Parazoo February 2023 Korsfjord"
+               )
+mar_fa23 <- sampling_event_3(mydf = mar_2023fa_data,
+               month_info = "March",
+               fjord_info = "Fanafjord",
+               year_info = "2023",
+               sampling = "Parazoo March 2023 Fanafjord"
+               )
+mar_ko23 <- sampling_event_3(mydf = mar_2023ko_data,
+               month_info = "March",
+               fjord_info = "Korsfjord",
+               year_info = "2023",
+               sampling = "Parazoo March 2023 Korsfjord"
+               )
+april_fa23 <- sampling_event_3(mydf = april_2023fa_data,
+               month_info = "April",
+               fjord_info = "Fanafjord",
+               year_info = "2023",
+               sampling = "Parazoo April 2023 Fanafjord"
+               )
+april_ko23 <- sampling_event_3(mydf = april_2023ko_data,
+               month_info = "April",
+               fjord_info = "Korsfjord",
+               year_info = "2023",
+               sampling = "Parazoo April 2023 Korsfjord"
+               )
+may_fa23 <- sampling_event_3(mydf = may_2023fa_data,
+               month_info = "May",
+               fjord_info = "Fanafjord",
+               year_info = "2023",
+               sampling = "Parazoo May 2023 Fanafjord"
+               )
+may_ko23 <- sampling_event_3(mydf = may_2023ko_data,
+               month_info = "May",
+               fjord_info = "Korsfjord",
+               year_info = "2023",
+               sampling = "Parazoo May 2023 Korsfjord"
+               )
+june_fa23 <- sampling_event_3(mydf = june_2023fa_data,
+               month_info = "June",
+               fjord_info = "Fanafjord",
+               year_info = "2023",
+               sampling = "Parazoo June 2023 Fanafjord"
+               )
+june_ko23 <- sampling_event_3(mydf = june_2023ko_data,
+               month_info = "June",
+               fjord_info = "Korsfjord",
+               year_info = "2023",
+               sampling = "Parazoo June 2023 Korsfjord"
+               )
+jul_fa23 <- sampling_event_3(mydf = jul_2023fa_data,
+               month_info = "July",
+               fjord_info = "Fanafjord",
+               year_info = "2023",
+               sampling = "Parazoo July 2023 Fanafjord"
+               )
+jul_ko23 <- sampling_event_3(mydf = jul_2023ko_data,
+               month_info = "July",
+               fjord_info = "Korsfjord",
+               year_info = "2023",
+               sampling = "Parazoo July 2023 Korsfjord"
+               )
+aug_fa23 <- sampling_event_3(mydf = aug_2023fa_data,
+               month_info = "August",
+               fjord_info = "Fanafjord",
+               year_info = "2023",
+               sampling = "Parazoo August 2023 Fanafjord"
+               )
+aug_ko23 <- sampling_event_3(mydf = aug_2023ko_data,
+               month_info = "August",
+               fjord_info = "Korsfjord",
+               year_info = "2023",
+               sampling = "Parazoo August 2023 Korsfjord"
+               )
+sep_fa23 <- sampling_event_3(mydf = sep_2023fa_data,
+               month_info = "September",
+               fjord_info = "Fanafjord",
+               year_info = "2023",
+               sampling = "Parazoo September 2023 Fanafjord"
+               )
+sep_ko23 <- sampling_event_3(mydf = sep_2023ko_data,
+               month_info = "September",
+               fjord_info = "Korsfjord",
+               year_info = "2023",
+               sampling = "Parazoo September 2023 Korsfjord"
+               )
+oct_fa23 <- sampling_event_3(mydf = oct_2023fa_data,
+               month_info = "October",
+               fjord_info = "Fanafjord",
+               year_info = "2023",
+               sampling = "Parazoo October 2023 Fanafjord"
+               )
+oct_ko23 <- sampling_event_3(mydf = oct_2023ko_data,
+               month_info = "October",
+               fjord_info = "Korsfjord",
+               year_info = "2023",
+               sampling = "Parazoo October 2023 Korsfjord"
+               )
+nov_fa23 <- sampling_event_3(mydf = nov_2023fa_data,
+               month_info = "November",
+               fjord_info = "Fanafjord",
+               year_info = "2023",
+               sampling = "Parazoo November 2023 Fanafjord"
+               )
+nov_ko23 <- sampling_event_3(mydf = nov_2023ko_data,
+               month_info = "November",
+               fjord_info = "Korsfjord",
+               year_info = "2023",
+               sampling = "Parazoo November 2023 Korsfjord"
+               )
+dec_fa23 <- sampling_event_3(mydf = dec_2023fa_data,
+               month_info = "December",
+               fjord_info = "Fanafjord",
+               year_info = "2023",
+               sampling = "Parazoo December 2023 Fanafjord"
+               )
+dec_ko23 <- sampling_event_3(mydf = dec_2023ko_data,
+               month_info = "December",
+               fjord_info = "Korsfjord",
+               year_info = "2023",
+               sampling = "Parazoo December 2023 Korsfjord"
+               )
+
+```
+
+```{r}
+#Combined table! April in Fanafjord the measurements for oxygen are wrong --> taken out for plot 
+
+combined_24 <- rbind(jan_24, feb_24, mar_24, april_24, may_24, jun_24, jul_24, aug_24, sep_24, oct_24, nov_24, dec_24, jan_fa23, jan_ko23, feb_ko23, mar_fa23, mar_ko23, april_ko23,june_fa23, june_ko23, jul_fa23, jul_ko23, aug_fa23, aug_ko23, sep_fa23, sep_ko23, oct_fa23, oct_ko23, nov_fa23, nov_ko23, dec_fa23, dec_ko23, may_ko23  ) #april_fa23, may_fa23 May Korsfjord 2023 has no oxygen values (wrong measurements)
+
+ordered_24 <- function(loca_inf, year_inf) {
+  combined_24 |> 
+    filter(location == loca_inf, year == year_inf) |> 
+   mutate(
+    month = factor(month, 
+                   levels = c("January", "February", "March", "April", "May", "June",
+                           "July", "August", "September", "October", "November", "December"),
+                      ordered = TRUE)
+    ) |> 
+  #filter(!is.infinite(depth)) |> 
+ drop_na(depth, dissolved_o2_saturation) 
+}
+#|> 
+  #mutate(mean_salinity = as.numeric(mean_salinity, na.rm = TRUE),
+  #       mean_oxygen = as.numeric(mean_oxygen, na.rm = TRUE),
+  #       mean_temperature = as.numeric(mean_temperature, na.rm = TRUE))
+
+korsfjord__24 <- ordered_24(loca_inf = "Korsfjord",
+                          year_inf = "2024"
+                          )
+
+korsfjord__23 <- ordered_24(loca_inf = "Korsfjord",
+                          year_inf = "2023"
+                          )
+
+fanafjord__23 <- ordered_24(loca_inf = "Fanafjord",
+                          year_inf = "2023"
+                          )
+
+```
+
+
+```{r}
+col_pal <- c(
+  "#e6194b",    # Red
+  "#3cb44b",    # Green
+  "#ffe119",    # Yellow
+  "#4363d8",    # Blue
+  "#f58231",    # Orange
+  "#911eb4",    # Purple
+  "#46f0f0",    # Cyan
+  "#f032e6",    # Magenta
+  "#bcf60c",    # Light Green
+  "#fabebe",    # Pink
+  "#008080",    # Teal
+  "#800000"     # Brown
+)
+```
+
+```{r}
+
+plot_no4 <- function(mydf, xaxis, valx) {
+ggplot(mydf,
+         aes(x = valx, y = depth, color = month)) +
+    geom_path(size = 1) +
+    scale_y_reverse(breaks = seq(0, max(mydf$depth), 50)) +
+     coord_cartesian(xlim = c(25, 35)) +
+   scale_x_continuous(breaks = c(25, 27, 29, 31, 33, 35)) + #, expand = c(0.2, 0)
+    scale_colour_manual(values = col_pal) +  
+  theme_bw() +
+    theme(
+      legend.position = "",
+      axis.text = element_text(size = 12),
+      axis.title = element_text(size = 14)
+    ) +
+    labs(
+      x = xaxis,
+      y = "Pressure (dbar)",
+      color = "Month"
+    )
+}
+
+ctd_plot4_<- plot_no4(mydf = korsfjord__24,    # korsfjord__24, fanafjord__23
+            xaxis = "Salinity (PSU)",    # "Pressure (dbar)", "Oxygen (%)"
+            valx = korsfjord__24$salinity           # temperature_3, salinity, dissolved_o2_saturation
+            )
+ctd_plot4_
+```
+
+```{r}
+ggplot(ordered_24,
+         aes(x = salinity, y = depth, color = month)) +
+    geom_path(size = 1) +
+    scale_y_reverse(breaks = seq(0, max(ordered_24$depth), 50)) + #breaks = seq(0, max(ordered_24$depth), 50)
+   scale_colour_manual(values = col_pal) + 
+   theme_bw() +
+    theme(
+      legend.position = "bottom",
+      axis.text = element_text(size = 12),
+      axis.title = element_text(size = 14),
+      # Remove left y-axis
+    axis.line.y = element_blank(),
+    axis.text.y = element_blank(),
+    axis.title.y = element_blank(),
+    # Add right y-axis
+    axis.line.y.right = element_line(color = "black"),
+    axis.text.y.right = element_text(color = "black", size = 12),
+    axis.title.y.right = element_text(color = "black", size = 14)
+  ) +
+    labs(
+      x = expression(Salinity~(PSU)),
+      y = "Pressure (dbar)",
+      color = "Month"
+    )
+```
+
+```{r}
+ggplot(ordered_24,
+         aes(x = dissolved_o2_saturation, y = depth, color = month)) +
+    geom_path(size = 1) +
+    scale_y_reverse(breaks = seq(0, max(ordered_24$depth), 50)) + #breaks = seq(0, max(ordered_24$depth), 50)
+    scale_colour_manual(values = col_pal) +
+  theme_bw() +
+      theme(
+      legend.position = "bottom",
+      axis.text = element_text(size = 12),
+      axis.title = element_text(size = 14),
+      # Remove left y-axis
+    axis.line.y = element_blank(),
+    axis.text.y = element_blank(),
+    axis.title.y = element_blank(),
+    # Add right y-axis
+    axis.line.y.right = element_line(color = "black"),
+    axis.text.y.right = element_text(color = "black", size = 12),
+    axis.title.y.right = element_text(color = "black", size = 14)
+  )  +
+    labs(
+      x = "Oxygen (%)",
+      y = "Pressure (dbar)",
+      color = "Month"
+    )
+```
+
+```{r}
+ctd_3 <- function(mydf, myycol, mycolours, limits_y, ylab, ciu, cil) {
+ggplot(mydf, aes(x = month, y = .data[[myycol]], colour = sampling_trip, shape = sampling_trip)) +
+  geom_point() +
+   geom_line(aes(group = sampling_trip)) +
+  scale_color_manual(values = mycolours) +
+  scale_shape_manual(values = c(15, 16, 17)) +
+  theme_minimal() +
+  geom_ribbon(
+    aes(ymin = .data[[cil]], ymax = .data[[ciu]]),
+    alpha = 1,  # Transparency level
+    color = NA    # No border around the ribbon
+  ) +
+  labs(
+    title = "",
+    x = "",
+    y = ylab
+  ) +
+    scale_y_continuous(limits = limits_y)+
+    theme(
+    panel.grid.minor = element_line(colour = "lightgray", linewidth = 0.25),
+    panel.grid.major = element_line(colour = "gray90", linewidth = 0.5),
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    legend.title = element_blank(),
+    legend.position = "bottom"
+  ) 
+}
+
+salinity_3 <- ctd_3(mydf = ordered_24,
+                    myycol = "mean_salinity",
+                    mycolours = c("deeppink4", "green3", "deeppink"),
+                    limits_y = c(20, 40),
+                    ylab = "Mean salinity (PSU)",
+                    cil = "ci_lower_sal",
+                    ciu = "ci_upper_sal") 
+salinity_3
+
+```
+
+```{r}
+temperature_3 <- ctd_3(mydf = ordered_24,
+                    myycol = "mean_temperature",
+                    mycolours = c("deeppink4", "green3", "deeppink"),
+                    limits_y = c(5, 15),
+                    ylab = "Mean temperature (°C)",
+                    cil = "ci_lower_temp",
+                    ciu = "ci_upper_temp")
+temperature_3
+```
+
+```{r}
+oxygen_3 <- ctd_3(mydf = ordered_24,
+                    myycol = "mean_oxygen",
+                    mycolours = c("deeppink4", "green3", "deeppink"),
+                    limits_y = c(0, 150),
+                    ylab = "Dissolved oxygen saturation (%)",
+                    cil = "ci_lower_oxy",
+                    ciu = "ci_upper_oxy")
+oxygen_3
+```
+
+### mean values 
+
+```{r}
+sampling_event_3 <- function(mydf, month_info, fjord_info, year_info, sampling)
+{   mydf|> 
+  summarise(
+  mean_temperature = mean(temperature_3, na.rm = TRUE),
+    ci_lower_temp = mean(temperature_3, na.rm = TRUE) - 
+      qt(0.975, df = n() - 1) * sd(temperature_3, na.rm = TRUE) / sqrt(n()),
+    ci_upper_temp = mean(temperature_3, na.rm = TRUE) +
+      qt(0.975, df = n() - 1) * sd(temperature_3, na.rm = TRUE) / sqrt(n()),
+  mean_oxygen = mean(dissolved_o2_saturation, na.rm = TRUE),
+    ci_lower_oxy = mean(dissolved_o2_saturation, na.rm = TRUE) - 
+      qt(0.975, df = n() - 1) * sd(dissolved_o2_saturation, na.rm = TRUE) / sqrt(n()),
+    ci_upper_oxy = mean(dissolved_o2_saturation, na.rm = TRUE) +
+      qt(0.975, df = n() - 1) * sd(dissolved_o2_saturation, na.rm = TRUE) / sqrt(n()),
+  mean_salinity = mean(salinity, na.rm = TRUE),
+    ci_lower_sal = mean(salinity, na.rm = TRUE) - 
+      qt(0.975, df = n() - 1) * sd(salinity, na.rm = TRUE) / sqrt(n()),
+    ci_upper_sal = mean(salinity, na.rm = TRUE) +
+      qt(0.975, df = n() - 1) * sd(salinity, na.rm = TRUE) / sqrt(n())
+  ) |> 
+  mutate(month = month_info, location = fjord_info, year = year_info, sampling_trip = sampling) |> 
+    group_by(location, month, year, sampling_trip)
+}
+  
+  
+```
+
+```{r}
+#Final table
+jan_24 <- sampling_event_3(mydf = jan_2024_data,
+               month_info = "January",
+               fjord_info = "Korsfjord",
+               year_info = "2024",
+               sampling = "Parazoo January 2024 Korsfjord"
+               )
+
+feb_24 <- sampling_event_3(mydf = feb_2024_data,
+               month_info = "February",
+               fjord_info = "Korsfjord",
+               year_info = "2024",
+               sampling = "Parazoo February 2024 Korsfjord"
+               )
+mar_24 <- sampling_event_3(mydf = mar_2024_data,
+               month_info = "March",
+               fjord_info = "Korsfjord",
+               year_info = "2024",
+               sampling = "Parazoo March 2024 Korsfjord"
+               )
+april_24 <- sampling_event_3(mydf = april_2024_data,
+               month_info = "April",
+               fjord_info = "Korsfjord",
+               year_info = "2024",
+               sampling = "Parazoo April 2024 Korsfjord"
+               )
+may_24 <- sampling_event_3(mydf = may_2024_data,
+               month_info = "May",
+               fjord_info = "Korsfjord",
+               year_info = "2024",
+               sampling = "Parazoo May 2024 Korsfjord"
+               )
+jun_24 <- sampling_event_3(mydf = june_2024_data,
+               month_info = "June",
+               fjord_info = "Korsfjord",
+               year_info = "2024",
+               sampling = "Parazoo June 2024 Korsfjord"
+               )
+jul_24 <- sampling_event_3(mydf = jul_2024_data,
+               month_info = "July",
+               fjord_info = "Korsfjord",
+               year_info = "2024",
+               sampling = "Parazoo July 2024 Korsfjord"
+               )
+aug_24 <- sampling_event_3(mydf = aug_2024_data,
+               month_info = "August",
+               fjord_info = "Korsfjord",
+               year_info = "2024",
+               sampling = "Parazoo August 2024 Korsfjord"
+               )
+sep_24 <- sampling_event_3(mydf = sep_2024_data,
+               month_info = "September",
+               fjord_info = "Korsfjord",
+               year_info = "2024",
+               sampling = "Parazoo September 2024 Korsfjord"
+               )
+oct_24 <- sampling_event_3(mydf = oct_2024_data,
+               month_info = "October",
+               fjord_info = "Korsfjord",
+               year_info = "2024",
+               sampling = "Parazoo October 2024 Korsfjord"
+               )
+nov_24 <- sampling_event_3(mydf = nov_2024_data,
+               month_info = "November",
+               fjord_info = "Korsfjord",
+               year_info = "2024",
+               sampling = "Parazoo November 2024 Korsfjord"
+               )
+dec_24 <- sampling_event_3(mydf = dec_2024_data,
+               month_info = "December",
+               fjord_info = "Korsfjord",
+               year_info = "2024",
+               sampling = "Parazoo December 2024 Korsfjord"
+               )
+## Korsfjord and Fanafjord 2023
+
+jan_fa23 <- sampling_event_3(mydf = jan_2023fa_data,
+               month_info = "January",
+               fjord_info = "Fanafjord",
+               year_info = "2023",
+               sampling = "Parazoo January 2023 Fanafjord"
+               )
+jan_ko23 <- sampling_event_3(mydf = jan_2023ko_data,
+               month_info = "January",
+               fjord_info = "Korsfjord",
+               year_info = "2023",
+               sampling = "Parazoo January 2023 Korsfjord"
+               )
+
+feb_ko23 <- sampling_event_3(mydf = feb_2023ko_data,
+               month_info = "February",
+               fjord_info = "Korsfjord",
+               year_info = "2023",
+               sampling = "Parazoo February 2023 Korsfjord"
+               )
+mar_fa23 <- sampling_event_3(mydf = mar_2023fa_data,
+               month_info = "March",
+               fjord_info = "Fanafjord",
+               year_info = "2023",
+               sampling = "Parazoo March 2023 Fanafjord"
+               )
+mar_ko23 <- sampling_event_3(mydf = mar_2023ko_data,
+               month_info = "March",
+               fjord_info = "Korsfjord",
+               year_info = "2023",
+               sampling = "Parazoo March 2023 Korsfjord"
+               )
+april_fa23 <- sampling_event_3(mydf = april_2023fa_data,
+               month_info = "April",
+               fjord_info = "Fanafjord",
+               year_info = "2023",
+               sampling = "Parazoo April 2023 Fanafjord"
+               )
+april_ko23 <- sampling_event_3(mydf = april_2023ko_data,
+               month_info = "April",
+               fjord_info = "Korsfjord",
+               year_info = "2023",
+               sampling = "Parazoo April 2023 Korsfjord"
+               )
+may_fa23 <- sampling_event_3(mydf = may_2023fa_data,
+               month_info = "May",
+               fjord_info = "Fanafjord",
+               year_info = "2023",
+               sampling = "Parazoo May 2023 Fanafjord"
+               )
+may_ko23 <- sampling_event_3(mydf = may_2023ko_data,
+               month_info = "May",
+               fjord_info = "Korsfjord",
+               year_info = "2023",
+               sampling = "Parazoo May 2023 Korsfjord"
+               )
+june_fa23 <- sampling_event_3(mydf = june_2023fa_data,
+               month_info = "June",
+               fjord_info = "Fanafjord",
+               year_info = "2023",
+               sampling = "Parazoo June 2023 Fanafjord"
+               )
+june_ko23 <- sampling_event_3(mydf = june_2023ko_data,
+               month_info = "June",
+               fjord_info = "Korsfjord",
+               year_info = "2023",
+               sampling = "Parazoo June 2023 Korsfjord"
+               )
+jul_fa23 <- sampling_event_3(mydf = jul_2023fa_data,
+               month_info = "July",
+               fjord_info = "Fanafjord",
+               year_info = "2023",
+               sampling = "Parazoo July 2023 Fanafjord"
+               )
+jul_ko23 <- sampling_event_3(mydf = jul_2023ko_data,
+               month_info = "July",
+               fjord_info = "Korsfjord",
+               year_info = "2023",
+               sampling = "Parazoo July 2023 Korsfjord"
+               )
+aug_fa23 <- sampling_event_3(mydf = aug_2023fa_data,
+               month_info = "August",
+               fjord_info = "Fanafjord",
+               year_info = "2023",
+               sampling = "Parazoo August 2023 Fanafjord"
+               )
+aug_ko23 <- sampling_event_3(mydf = aug_2023ko_data,
+               month_info = "August",
+               fjord_info = "Korsfjord",
+               year_info = "2023",
+               sampling = "Parazoo August 2023 Korsfjord"
+               )
+sep_fa23 <- sampling_event_3(mydf = sep_2023fa_data,
+               month_info = "September",
+               fjord_info = "Fanafjord",
+               year_info = "2023",
+               sampling = "Parazoo September 2023 Fanafjord"
+               )
+sep_ko23 <- sampling_event_3(mydf = sep_2023ko_data,
+               month_info = "September",
+               fjord_info = "Korsfjord",
+               year_info = "2023",
+               sampling = "Parazoo September 2023 Korsfjord"
+               )
+oct_fa23 <- sampling_event_3(mydf = oct_2023fa_data,
+               month_info = "October",
+               fjord_info = "Fanafjord",
+               year_info = "2023",
+               sampling = "Parazoo October 2023 Fanafjord"
+               )
+oct_ko23 <- sampling_event_3(mydf = oct_2023ko_data,
+               month_info = "October",
+               fjord_info = "Korsfjord",
+               year_info = "2023",
+               sampling = "Parazoo October 2023 Korsfjord"
+               )
+nov_fa23 <- sampling_event_3(mydf = nov_2023fa_data,
+               month_info = "November",
+               fjord_info = "Fanafjord",
+               year_info = "2023",
+               sampling = "Parazoo November 2023 Fanafjord"
+               )
+nov_ko23 <- sampling_event_3(mydf = nov_2023ko_data,
+               month_info = "November",
+               fjord_info = "Korsfjord",
+               year_info = "2023",
+               sampling = "Parazoo November 2023 Korsfjord"
+               )
+dec_fa23 <- sampling_event_3(mydf = dec_2023fa_data,
+               month_info = "December",
+               fjord_info = "Fanafjord",
+               year_info = "2023",
+               sampling = "Parazoo December 2023 Fanafjord"
+               )
+dec_ko23 <- sampling_event_3(mydf = dec_2023ko_data,
+               month_info = "December",
+               fjord_info = "Korsfjord",
+               year_info = "2023",
+               sampling = "Parazoo December 2023 Korsfjord"
+               )
+
+```
+
+```{r}
+#Combined table! April in Fanafjord the measurements for oxygen are wrong --> taken out for plot 
+
+combined_24_mean <- rbind(jan_24, feb_24, mar_24, april_24, may_24, jun_24, jul_24, aug_24, sep_24, oct_24, nov_24, dec_24, jan_fa23, jan_ko23, feb_ko23, mar_fa23, mar_ko23, april_ko23,june_fa23, june_ko23, jul_fa23, jul_ko23, aug_fa23, aug_ko23, sep_fa23, sep_ko23, oct_fa23, oct_ko23, nov_fa23, nov_ko23, dec_fa23, dec_ko23, may_ko23  ) |> 
+  filter(mean_oxygen > 0)#april_fa23, may_fa23 May Korsfjord 2023 has no oxygen values (wrong measurements)
+
+ordered_24_mean <- function(loca_inf, year_inf) {
+  combined_24_mean |> 
+    filter(location == loca_inf, year == year_inf) |> 
+   mutate(
+    month = factor(month, 
+                   levels = c("January", "February", "March", "April", "May", "June",
+                           "July", "August", "September", "October", "November", "December"),
+                      ordered = TRUE)
+    ) |> 
+  #filter(!is.infinite(depth)) |> 
+ filter(mean_oxygen > 0) |> # to filter May oxygen out
+  mutate(mean_salinity = as.numeric(mean_salinity, na.rm = TRUE),
+         mean_oxygen = as.numeric(mean_oxygen, na.rm = TRUE),
+         mean_temperature = as.numeric(mean_temperature, na.rm = TRUE))
+}
+
+korsfjord__24_mean <- ordered_24_mean(loca_inf = "Korsfjord",
+                          year_inf = "2024"
+                          )
+
+korsfjord__23_mean <- ordered_24_mean(loca_inf = "Korsfjord",
+                          year_inf = "2023"
+                          )
+
+fanafjord__23_mean <- ordered_24_mean(loca_inf = "Fanafjord",
+                          year_inf = "2023"
+                          )
+
+```
+
+
+## 2. Arctic CTD
+
+```{r}
+#Package loading with error messages and solutions:
+
+#install.packages("oce")
+#unlink("C:/Users/leado/AppData/Local/R/win-library/4.4/00LOCK", recursive = TRUE)
+
+```
+
+#### Survey 1
+
+```{r}
+lines <- readLines(here::here("data/CTD/Sampling_event_1/dhe605_st01_1.cnv"))
+```
+
+```{r}
+
+ctd_st1 <- (read.ctd.sbe(here::here("data/CTD/Sampling_event_1/dhe605_st01_1.cnv")))@data
+ctd_st2 <- (read.ctd.sbe(here::here("data/CTD/Sampling_event_1/dhe605_st02_1.cnv")))@data
+ctd_st3 <- (read.ctd.sbe(here::here("data/CTD/Sampling_event_1/dhe605_st03_1.cnv")))@data
+ctd_st5 <- (read.ctd.sbe(here::here("data/CTD/Sampling_event_1/dhe605_st05_1.cnv")))@data
+ctd_st7 <- (read.ctd.sbe(here::here("data/CTD/Sampling_event_1/dhe605_st07_1.cnv")))@data
+ctd_st8 <- (read.ctd.sbe(here::here("data/CTD/Sampling_event_1/dhe605_st08_1.cnv")))@data
+ctd_st9 <- (read.ctd.sbe(here::here("data/CTD/Sampling_event_1/dhe605_st09_1.cnv")))@data
+ctd_st10 <- (read.ctd.sbe(here::here("data/CTD/Sampling_event_1/dhe605_st10_1.cnv")))@data
+ctd_st11 <- (read.ctd.sbe(here::here("data/CTD/Sampling_event_1/dhe605_st11_1.cnv")))@data
+ctd_st12 <- (read.ctd.sbe(here::here("data/CTD/Sampling_event_1/dhe605_st12_1.cnv")))@data
+ctd_st13 <- (read.ctd.sbe(here::here("data/CTD/Sampling_event_1/dhe605_st13_1.cnv")))@data
+ctd_st14 <- (read.ctd.sbe(here::here("data/CTD/Sampling_event_1/dhe605_st14_1.cnv")))@data
+ctd_st15 <- (read.ctd.sbe(here::here("data/CTD/Sampling_event_1/dhe605_st15_1.cnv")))@data
+ctd_st18 <- (read.ctd.sbe(here::here("data/CTD/Sampling_event_1/dhe605_st18_1.cnv")))@data
+ctd_st19 <- (read.ctd.sbe(here::here("data/CTD/Sampling_event_1/dhe605_st19_2.cnv")))@data
+ctd_st20 <- (read.ctd.sbe(here::here("data/CTD/Sampling_event_1/dhe605_st20_1.cnv")))@data
+ctd_st21_1 <- (read.ctd.sbe(here::here("data/CTD/Sampling_event_1/dhe605_st21_1.cnv")))@data
+ctd_st21_2 <- (read.ctd.sbe(here::here("data/CTD/Sampling_event_1/dhe605_st21_2.cnv")))@data
+ctd_st21_3 <- (read.ctd.sbe(here::here("data/CTD/Sampling_event_1/dhe605_st21_3.cnv")))@data
+ctd_st21_4 <- (read.ctd.sbe(here::here("data/CTD/Sampling_event_1/dhe605_st21_4.cnv")))@data
+ctd_st21_5 <- (read.ctd.sbe(here::here("data/CTD/Sampling_event_1/dhe605_st21_5.cnv")))@data
+ctd_st21_6 <- (read.ctd.sbe(here::here("data/CTD/Sampling_event_1/dhe605_st21_6.cnv")))@data
+ctd_st23 <- (read.ctd.sbe(here::here("data/CTD/Sampling_event_1/dhe605_st23_1.cnv")))@data
+ctd_st24 <- (read.ctd.sbe(here::here("data/CTD/Sampling_event_1/dhe605_st24_1.cnv")))@data
+ctd_st26 <- (read.ctd.sbe(here::here("data/CTD/Sampling_event_1/dhe605_st26_1.cnv")))@data
+ctd_st27 <- (read.ctd.sbe(here::here("data/CTD/Sampling_event_1/dhe605_st27_1.cnv")))@data
+ctd_st29_1 <- (read.ctd.sbe(here::here("data/CTD/Sampling_event_1/dhe605_st29_1.cnv")))@data
+ctd_st29_2 <- (read.ctd.sbe(here::here("data/CTD/Sampling_event_1/dhe605_st29_2.cnv")))@data
+ctd_st30_1 <- (read.ctd.sbe(here::here("data/CTD/Sampling_event_1/dhe605_st30_1.cnv")))@data
+ctd_st30_2 <- (read.ctd.sbe(here::here("data/CTD/Sampling_event_1/dhe605_st30_2.cnv")))@data
+ctd_st31 <- (read.ctd.sbe(here::here("data/CTD/Sampling_event_1/dhe605_st31_1.cnv")))@data
+
+#summary(cnv_data)
+
+```
+
+```{r}
+ctd <- function(mydf) 
+  {data.frame(
+  oxygen = mydf$oxygen,     
+  temperature = mydf$temperature, 
+  salinity = mydf$salinity,
+  pressure = mydf$pressure
+)
+}
+
+ctd_sta1 <-  ctd(mydf = ctd_st1)
+ctd_stat2 <-  ctd(mydf = ctd_st2)
+ctd_sta3 <-  ctd(mydf = ctd_st3)
+ctd_sta5 <-  ctd(mydf = ctd_st5)
+ctd_sta7 <-  ctd(mydf = ctd_st7)
+ctd_sta8 <-  ctd(mydf = ctd_st8)
+ctd_sta9  <- ctd(mydf = ctd_st9)
+ctd_sta10 <-  ctd(mydf = ctd_st10)
+ctd_sta11 <-  ctd(mydf = ctd_st11)
+ctd_sta12 <-  ctd(mydf = ctd_st12)
+ctd_sta13 <-  ctd(mydf = ctd_st13)
+ctd_sta14 <-  ctd(mydf = ctd_st14)
+ctd_sta15 <-  ctd(mydf = ctd_st15)
+ctd_sta18 <-  ctd(mydf = ctd_st18)
+ctd_sta19 <-  ctd(mydf = ctd_st19)
+ctd_sta20 <-  ctd(mydf = ctd_st20)
+ctd_sta21_1 <-  ctd(mydf = ctd_st21_1)
+ctd_sta21_2 <-  ctd(mydf = ctd_st21_2)
+ctd_sta21_3 <-  ctd(mydf = ctd_st21_3)
+ctd_sta21_4 <-  ctd(mydf = ctd_st21_4)
+ctd_sta21_5 <-  ctd(mydf = ctd_st21_5)
+ctd_sta21_6 <-  ctd(mydf = ctd_st21_6)
+ctd_sta23 <-  ctd(mydf = ctd_st23)
+ctd_sta24 <-  ctd(mydf = ctd_st24)
+ctd_sta26 <-  ctd(mydf = ctd_st26)
+ctd_sta27 <-  ctd(mydf = ctd_st27)
+ctd_sta29_2 <-  ctd(mydf = ctd_st29_2) |> 
+  slice(1:which.max(pressure >= 400))
+ctd_sta30_2 <-  ctd(mydf = ctd_st30_2)|> 
+  slice(1:which.max(pressure >= 400))
+ctd_sta31 <- ctd(mydf = ctd_st31) 
+
+# Because measurements after 310 are not to be trusted (vvery high variation in between measurements)
+
+
+#  slice_tail(n = 5)
+```
+
+```{r}
+Arctic_ctd<- function(mydf, location_info, para_info, station_info)
+{   mydf|> 
+ # summarise(
+#  mean_temperature = mean(temperature, na.rm = TRUE),
+#    ci_lower_temp = mean(temperature, na.rm = TRUE) - 
+#      qt(0.975, df = n() - 1) * sd(temperature, na.rm = TRUE) / sqrt(n()),
+#    ci_upper_temp = mean(temperature, na.rm = TRUE) +
+#      qt(0.975, df = n() - 1) * sd(temperature, na.rm = TRUE) / sqrt(n()),
+#  mean_oxygen = mean(oxygen, na.rm = TRUE),
+#    ci_lower_oxy = mean(oxygen, na.rm = TRUE) - 
+#      qt(0.975, df = n() - 1) * sd(oxygen, na.rm = TRUE) / sqrt(n()),
+#    ci_upper_oxy = mean(oxygen, na.rm = TRUE) +
+#      qt(0.975, df = n() - 1) * sd(oxygen, na.rm = TRUE) / sqrt(n()),
+#  mean_salinity = mean(salinity, na.rm = TRUE),
+#    ci_lower_sal = mean(salinity, na.rm = TRUE) - 
+#      qt(0.975, df = n() - 1) * sd(salinity, na.rm = TRUE) / sqrt(n()),
+#    ci_upper_sal = mean(salinity, na.rm = TRUE) +
+#      qt(0.975, df = n() - 1) * sd(salinity, na.rm = TRUE) / sqrt(n())
+#  ) |> 
+  mutate(location = location_info, parasitized = para_info, station = station_info, year = "2022", sampling_event = "1") |> 
+    group_by(location, parasitized)
+}
+
+Arctic_ctd1<- rbind(Arctic_ctd(mydf = ctd_sta1, location_info = "Krossfjorden", para_info = "Yes", station_info = "1"), 
+         Arctic_ctd(mydf = ctd_sta2, location_info = "Krossfjorden", para_info = "Yes", station_info = "2"), 
+         Arctic_ctd(mydf = ctd_sta3, location_info = "Kongsfjorden", para_info = "Yes", station_info = "3"), 
+         Arctic_ctd(mydf = ctd_sta7, location_info = "Billefjorden", para_info = "Yes", station_info = "7"),
+         Arctic_ctd(mydf = ctd_sta8, location_info = "Billefjorden", para_info = "Yes", station_info = "8"),
+         Arctic_ctd(mydf = ctd_sta9, location_info = "Billefjorden", para_info = "Yes", station_info = "9"),
+         Arctic_ctd(mydf = ctd_sta10, location_info = "Van Mijenfjorden", para_info = "No", station_info = "10"),
+         Arctic_ctd(mydf = ctd_sta11, location_info = "Van Mijenfjorden", para_info = "Yes", station_info = "11"),
+         Arctic_ctd(mydf = ctd_sta12, location_info = "Van Mijenfjorden", para_info = "Yes", station_info = "12"),
+         Arctic_ctd(mydf = ctd_sta14, location_info = "Hornsund", para_info = "Yes", station_info = "14"),
+         Arctic_ctd(mydf = ctd_sta15, location_info = "Hornsund", para_info = "Yes", station_info = "15"),
+         Arctic_ctd(mydf = ctd_sta18, location_info = "Barents Sea", para_info = "No", station_info = "18"),
+         Arctic_ctd(mydf = ctd_sta19, location_info = "Barents Sea", para_info = "Yes", station_info = "19"),
+         Arctic_ctd(mydf = ctd_sta21_1, location_info = "Porsangerfjorden", para_info = "Yes", station_info = "21"),
+         Arctic_ctd(mydf = ctd_sta23, location_info = "Porsangerfjorden", para_info = "No", station_info = "23"),
+         Arctic_ctd(mydf = ctd_sta24, location_info = "Porsangerfjorden", para_info = "No", station_info = "24"),
+         Arctic_ctd(mydf = ctd_sta26, location_info = "Porsangerfjorden", para_info = "No", station_info = "26"),
+         Arctic_ctd(mydf = ctd_sta27, location_info = "Porsangerfjorden", para_info = "Yes", station_info = "27"),
+         Arctic_ctd(mydf = ctd_sta29_2, location_info = "Bleik Canyon", para_info = "No", station_info = "29"),
+         Arctic_ctd(mydf = ctd_sta30_2, location_info = "Bleik Canyon", para_info = "No", station_info = "30"),
+         Arctic_ctd(mydf = ctd_sta31, location_info = "Bleik Canyon", para_info = "Yes", station_info = "31")
+)
+arctic_ctd1<- Arctic_ctd1 |> 
+ #  filter(location == "Hornsund") |> 
+  drop_na(temperature)
+  # mutate(
+  #  location = factor(location, 
+  #                 levels = c("Krossfjorden", "Kongsfjorden", "Billefjorden","Van Mijenfjorden","Hornsund", 
+  #                            "Barents Sea", "Porsangerfjorden", "Bleik Canyon"),
+  #                    ordered = TRUE) |> 
+     
+    #)
+```
+
+
+```{r}
+col_pal1 <- c(
+  "#e6194b",    # Red
+  "#3cb44b",    # Green
+  "#3cb44b",    # Green
+  "#3cb44b",    # Green
+  "#f58231",    # Orange
+  "#f58231",    # Orange
+  "#46f0f0",    # Cyan
+  "#46f0f0",    # Cyan
+  "#e6194b",    # Red
+  "#fabebe",    # Pink
+  "#fabebe",    # Pink
+  "#fabebe",    # Pink
+  "#fabebe",    # Pink
+  "#fabebe",    # Pink
+  "#ffe119",    # Yellow
+  "#911eb4",    # Purple
+  "#ffe119",    # Yellow
+  "#ffe119",    # Yellow
+  "#008080",    # Teal
+  "#008080",    # Teal
+  "#008080"    # Teal
+)
+
+
+station_col <- c(
+  "#ff0000", "#dc143c", "#ffc0cb",  # Reds
+  "#ffff00", "#ffd700", "#ffbf00",  # Yellows
+  "#4169e1", "#000080", "#87ceeb",  # Blues
+  "#800000", "#aaffc3", "#808000",  # Additional colors
+  "#ffd8b1", "#000075", "#808080",  # More colors
+  "#ffffff", "#000000",  "#911eb4",
+  "#008080", "#3cb44b", "#800000"         # White and Black
+) 
+```
+
+```{r}
+ggplot(arctic_ctd1,
+         aes(x = oxygen, y = pressure, color = station)) +
+     geom_path(size = 1) +
+    scale_y_reverse(breaks = seq(0, max(arctic_ctd1$pressure), 50)) +
+  scale_color_manual(values = station_col) +
+    theme_bw() +
+    theme(
+      legend.position = "bottom",
+      axis.text = element_text(size = 12),
+      axis.title = element_text(size = 14)
+    ) +
+    labs(
+      x = "Oxygen concentration (ml/l)",
+      y = "Pressure (dbar)",
+      color = "Location"
+    )
+
+```
+
+```{r}
+arcctd1<- ggplot(arctic_ctd1,
+         aes(x = temperature, y = pressure, color = station)) + # change x axis
+     geom_path(size = 1) +
+    scale_y_reverse(breaks = seq(0, max(arctic_ctd1$pressure), 50)) +
+  scale_color_manual(values = col_pal1) +
+    theme_bw() +
+    theme(
+      legend.position = "",
+      axis.text = element_text(size = 12),
+      axis.title = element_text(size = 14)
+    ) +
+    labs(
+      x = "Temperature (°C)", #change title
+      y = "Pressure (dbar)",
+      color = "Location"
+    )
+arcctd1
+
+```
+
+```{r}
+## Only for Legend
+arcctd1_leg<- ggplot(arctic_ctd1,
+         aes(x = oxygen, y = pressure, color = location)) +
+     geom_path(size = 1) +
+    scale_y_reverse(breaks = seq(0, max(arctic_ctd1$pressure), 50)) +
+  scale_color_manual(values = c( "#46f0f0","#008080","#ffe119","#f58231","#911eb4","#e6194b","#fabebe","#3cb44b")) +
+    theme_bw() +
+    theme(
+      legend.position = "bottom",
+      axis.text = element_text(size = 12),
+      axis.title = element_text(size = 14)
+    ) +
+    labs(
+      x = "Oxygen concentration (ml/l)",
+      y = "Pressure (dbar)",
+      color = "Location"
+    )
+arcctd1_leg
+
+```
+
+```{r}
+#Plotting the data Arctic 1
+
+Arctic_ctd_plot<- function(mydf, myycol, mycolours, limits_y, ylab, cil, ciu, breaks_y) {
+ggplot(mydf, aes(x = location, y = .data[[myycol]], shape = parasitized)) +
+  geom_jitter( color = mycolours, width = 0.2, height = 0) +
+  scale_shape_manual( values = c(15, 25)) +
+  theme_minimal() +
+    scale_y_continuous(limits = limits_y, breaks = breaks_y)+
+  geom_ribbon(
+    aes(ymin = .data[[cil]], ymax = .data[[ciu]]),
+    alpha = 1,  # Transparency level
+    color = NA    # No border around the ribbon
+  ) +
+  labs(
+    title = "",
+    x = "",
+    y = ylab
+  ) +
+      theme(
+    panel.grid.minor = element_line(colour = "lightgray", linewidth = 0.25),
+    panel.grid.major = element_line(colour = "gray90", linewidth = 0.5),
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    legend.title = element_blank()
+    
+  ) +
+    theme(legend.title = element_text())
+}
+
+salinity_1 <- Arctic_ctd_plot(mydf = arctic_ctd1,
+                    myycol = "mean_salinity",
+                    mycolours = c("orange2"),
+                    limits_y = c(32, 36),
+                    ylab = "Mean salinity (PSU)",
+                    cil = "ci_lower_sal",
+                    ciu = "ci_upper_sal",
+                     breaks_y = c(33, 34, 35, 36)) 
+salinity_1
+```
+
+```{r}
+temperature_1 <- Arctic_ctd_plot(mydf = arctic_ctd1,
+                    myycol = "mean_temperature",
+                    mycolours = c("orange2"),
+                    limits_y = c(-2, 12),
+                    ylab = "Mean temperature (°C)",
+                    cil = "ci_lower_temp",
+                    ciu = "ci_upper_temp",
+                    breaks_y = c(-2, 5, 10))
+temperature_1
+```
+
+```{r}
+oxygen_1 <- Arctic_ctd_plot(mydf = arctic_ctd1,
+                    myycol = "mean_oxygen",
+                    mycolours = c("orange2"),
+                    limits_y = c(5, 9),
+                    ylab = "Mean oxygen (ml/l)",
+                    cil = "ci_lower_oxy",
+                    ciu = "ci_upper_oxy",
+                     breaks_y = c(5, 6, 7, 8, 9))
+oxygen_1
+```
+
+## Survey 2
+
+```{r}
+ctd_st268 <- (read.ctd.sbe(here::here("data/CTD/Sampling_event_2/Sta0268.cnv")))@data
+ctd_st273 <- (read.ctd.sbe(here::here("data/CTD/Sampling_event_2/Sta0273.cnv")))@data
+ctd_st275 <- (read.ctd.sbe(here::here("data/CTD/Sampling_event_2/Sta0275.cnv")))@data
+ctd_st278 <- (read.ctd.sbe(here::here("data/CTD/Sampling_event_2/Sta0278.cnv")))@data
+ctd_st279 <- (read.ctd.sbe(here::here("data/CTD/Sampling_event_2/Sta0279.cnv")))@data
+ctd_st281 <- (read.ctd.sbe(here::here("data/CTD/Sampling_event_2/Sta0281.cnv")))@data
+ctd_st282 <- (read.ctd.sbe(here::here("data/CTD/Sampling_event_2/Sta0282.cnv")))@data
+ctd_st283 <- (read.ctd.sbe(here::here("data/CTD/Sampling_event_2/Sta0283.cnv")))@data
+ctd_st284 <- (read.ctd.sbe(here::here("data/CTD/Sampling_event_2/Sta0284.cnv")))@data
+ctd_st285 <- (read.ctd.sbe(here::here("data/CTD/Sampling_event_2/Sta0285.cnv")))@data
+ctd_st286 <- (read.ctd.sbe(here::here("data/CTD/Sampling_event_2/Sta0286.cnv")))@data
+ctd_st288 <- (read.ctd.sbe(here::here("data/CTD/Sampling_event_2/Sta0288.cnv")))@data
+ctd_st289 <- (read.ctd.sbe(here::here("data/CTD/Sampling_event_2/Sta0289.cnv")))@data
+ctd_st290 <- (read.ctd.sbe(here::here("data/CTD/Sampling_event_2/Sta0290.cnv")))@data
+ctd_st293  <- (read.ctd.sbe(here::here("data/CTD/Sampling_event_2/Sta0293.cnv")))@data
+ctd_st295 <- (read.ctd.sbe(here::here("data/CTD/Sampling_event_2/Sta0295.cnv")))@data
+ctd_st296 <- (read.ctd.sbe(here::here("data/CTD/Sampling_event_2/Sta0296.cnv")))@data
+ctd_st297 <- (read.ctd.sbe(here::here("data/CTD/Sampling_event_2/Sta0297.cnv")))@data
+ctd_st298 <- (read.ctd.sbe(here::here("data/CTD/Sampling_event_2/Sta0298.cnv")))@data
+ctd_st299 <- (read.ctd.sbe(here::here("data/CTD/Sampling_event_2/Sta0299.cnv")))@data
+ctd_st300 <- (read.ctd.sbe(here::here("data/CTD/Sampling_event_2/Sta0300.cnv")))@data
+ctd_st301 <- (read.ctd.sbe(here::here("data/CTD/Sampling_event_2/Sta0301.cnv")))@data
+ctd_st302 <- (read.ctd.sbe(here::here("data/CTD/Sampling_event_2/Sta0302.cnv")))@data
+ctd_st304 <- (read.ctd.sbe(here::here("data/CTD/Sampling_event_2/Sta0304.cnv")))@data
+ctd_st305 <- (read.ctd.sbe(here::here("data/CTD/Sampling_event_2/Sta0305.cnv")))@data
+ctd_st306 <- (read.ctd.sbe(here::here("data/CTD/Sampling_event_2/Sta0306.cnv")))@data
+ctd_st307 <- (read.ctd.sbe(here::here("data/CTD/Sampling_event_2/Sta0307.cnv")))@data
+```
+
+```{r}
+ctd <- function(mydf) 
+  {data.frame(
+  oxygen = mydf$oxygen,     
+  temperature = mydf$temperature, 
+  salinity = mydf$salinity,
+  pressure = mydf$pressure 
+)
+}
+
+ctd_sta268 <-  ctd(mydf = ctd_st268)
+ctd_sta273 <-  ctd(mydf = ctd_st273)
+ctd_sta275 <-  ctd(mydf = ctd_st275)
+ctd_sta278 <-  ctd(mydf = ctd_st278)
+ctd_sta279 <-  ctd(mydf = ctd_st279)
+ctd_sta281 <-  ctd(mydf = ctd_st281)
+ctd_sta282  <- ctd(mydf = ctd_st282)
+ctd_sta283 <-  ctd(mydf = ctd_st283)
+ctd_sta284 <-  ctd(mydf = ctd_st284)
+ctd_sta285 <-  ctd(mydf = ctd_st285)
+ctd_sta286 <-  ctd(mydf = ctd_st286)
+ctd_sta288 <-  ctd(mydf = ctd_st288)
+ctd_sta289 <-  ctd(mydf = ctd_st289)
+ctd_sta290 <-  ctd(mydf = ctd_st290)
+ctd_sta293 <-  ctd(mydf = ctd_st293)
+ctd_stat295 <-  ctd(mydf = ctd_st295)
+ctd_sta296 <-  ctd(mydf = ctd_st296)
+ctd_stat297 <-  ctd(mydf = ctd_st297)
+ctd_stat298 <-  ctd(mydf = ctd_st298)
+ctd_sta299 <-  ctd(mydf = ctd_st299)
+ctd_stat300 <-  ctd(mydf = ctd_st300)
+ctd_stat301 <-  ctd(mydf = ctd_st301)
+ctd_stat302 <-  ctd(mydf = ctd_st302)
+ctd_stat304 <-  ctd(mydf = ctd_st304)
+ctd_stat305 <-  ctd(mydf = ctd_st305)
+ctd_stat306 <-  ctd(mydf = ctd_st306)
+ctd_stat307 <-  ctd(mydf = ctd_st307)
+
+ctd_sta297 <- ctd_stat297 |> 
+              filter(pressure >= 5) 
+ctd_sta300 <- ctd_stat300|> 
+              filter(pressure >= 9) 
+ctd_sta301 <- ctd_stat301|> 
+              filter(pressure >=5)  
+ctd_sta298 <- ctd_stat298 |> 
+              filter(pressure >= 4) 
+ctd_sta295 <- ctd_stat295|> 
+              filter(pressure >= 9) 
+ctd_sta302 <- ctd_stat302|> 
+              filter(pressure >= 6) |> 
+              slice(1:which.max(pressure >= 500))
+ctd_sta304 <- ctd_stat304|> 
+              slice(1:which.max(pressure >= 500))
+ctd_sta305 <- ctd_stat305|> 
+              filter(pressure >= 15) |> 
+              slice(1:which.max(pressure >= 500))
+ctd_sta306 <- ctd_stat306|> 
+              slice(1:which.max(pressure >= 500))
+ctd_sta307 <- ctd_stat307|> 
+              slice(1:which.max(pressure >= 500))
+```
+
+```{r}
+Arctic_ctd<- function(mydf, location_info, station_info, para_info)
+{   mydf|> 
+ # summarise(
+#  mean_temperature = mean(temperature, na.rm = TRUE),
+#    ci_lower_temp = mean(temperature, na.rm = TRUE) - 
+#      qt(0.975, df = n() - 1) * sd(temperature, na.rm = TRUE) / sqrt(n()),
+#    ci_upper_temp = mean(temperature, na.rm = TRUE) +
+ #     qt(0.975, df = n() - 1) * sd(temperature, na.rm = TRUE) / sqrt(n()),
+#  mean_oxygen = mean(oxygen, na.rm = TRUE),
+#    ci_lower_oxy = mean(oxygen, na.rm = TRUE) - 
+#      qt(0.975, df = n() - 1) * sd(oxygen, na.rm = TRUE) / sqrt(n()),
+#    ci_upper_oxy = mean(oxygen, na.rm = TRUE) +
+#      qt(0.975, df = n() - 1) * sd(oxygen, na.rm = TRUE) / sqrt(n()),
+#  mean_salinity = mean(salinity, na.rm = TRUE),
+#    ci_lower_sal = mean(salinity, na.rm = TRUE) - 
+#      qt(0.975, df = n() - 1) * sd(salinity, na.rm = TRUE) / sqrt(n()),
+#    ci_upper_sal = mean(salinity, na.rm = TRUE) +
+#      qt(0.975, df = n() - 1) * sd(salinity, na.rm = TRUE) / sqrt(n())
+#  ) |> 
+  mutate(location = location_info, station = station_info, parasitized = para_info, year = "2023", sampling_event = "2")
+}
+
+Arctic_ctd2<- rbind(Arctic_ctd(mydf = ctd_sta268, location_info = "Prins Karls Forland", station_info = 268, para_info = "Yes"), 
+         Arctic_ctd(mydf = ctd_sta273, location_info = "Danskøya", station_info = 273, para_info = "Yes"), 
+         Arctic_ctd(mydf = ctd_sta275, location_info = "North of Spitsbergen", station_info = 275, para_info = "No"), 
+         Arctic_ctd(mydf = ctd_sta278, location_info = "North of Spitsbergen", station_info = 278, para_info = "No"),
+         Arctic_ctd(mydf = ctd_sta279, location_info = "Hinlopenstretet", station_info = 279, para_info = "Yes"),
+         Arctic_ctd(mydf = ctd_sta281, location_info = "Nordaustlandet", station_info = 281, para_info = "Yes"),
+         Arctic_ctd(mydf = ctd_sta282, location_info = "Nordaustlandet", station_info = 282, para_info = "No"),
+         Arctic_ctd(mydf = ctd_sta283, location_info = "Nordaustlandet", station_info = 283, para_info = "No"),
+         Arctic_ctd(mydf = ctd_sta284, location_info = "Nordaustlandet", station_info = 284, para_info = "No"),
+         Arctic_ctd(mydf = ctd_sta285, location_info = "Nordaustlandet", station_info = 285, para_info = "No"),
+         Arctic_ctd(mydf = ctd_sta286, location_info = "Nordaustlandet", station_info = 286, para_info = "No"),
+         Arctic_ctd(mydf = ctd_sta288, location_info = "Nordaustlandet", station_info = 288, para_info = "No"),
+         Arctic_ctd(mydf = ctd_sta289, location_info = "Nordaustlandet", station_info = 289, para_info = "No"),
+         Arctic_ctd(mydf = ctd_sta290, location_info = "Kvitøya", station_info = 290, para_info = "No"),
+         Arctic_ctd(mydf = ctd_sta293, location_info = "Nordaustlandet", station_info = 293, para_info = "No"),
+         Arctic_ctd(mydf = ctd_sta295, location_info = "Kvitøya", station_info = 295, para_info = "No"),
+         Arctic_ctd(mydf = ctd_sta296, location_info = "Nordaustlandet", station_info = 296, para_info = "No"),
+         Arctic_ctd(mydf = ctd_sta297, location_info = "Hinlopenstretet", station_info = 297, para_info = "Yes"),
+         Arctic_ctd(mydf = ctd_sta298, location_info = "Hinlopenstretet", station_info = 298, para_info = "Yes"),
+         Arctic_ctd(mydf = ctd_sta299, location_info = "Hinlopenstretet", station_info = 299, para_info = "Yes"),
+         Arctic_ctd(mydf = ctd_sta300, location_info = "Hinlopenstretet", station_info = 300, para_info = "Yes"),
+         Arctic_ctd(mydf = ctd_sta301, location_info = "Hinlopenstretet", station_info = 301, para_info = "Yes"),
+         Arctic_ctd(mydf = ctd_sta302, location_info = "North of Spitsbergen", station_info = 302, para_info = "No"),
+         Arctic_ctd(mydf = ctd_sta304, location_info = "North of Spitsbergen", station_info = 304, para_info = "No"),
+         Arctic_ctd(mydf = ctd_sta305, location_info = "North of Spitsbergen", station_info = 305, para_info = "No"),
+         Arctic_ctd(mydf = ctd_sta307, location_info = "North of Spitsbergen", station_info = 307, para_info = "No")
+)
+arctic_ctd2<- Arctic_ctd2 |> 
+   mutate(station = as.character(station)) |> 
+  #filter(location != "North of Spitsbergen" ) |> 
+  filter(parasitized == "Yes") |> 
+   mutate(
+    location = factor(location, 
+                   levels = c("North of Spitsbergen", "Kvitøya", "Nordaustlandet", "Hinlopenstretet",  
+                              "Danskøya", "Prins Karls Forland"),
+                      ordered = TRUE)
+      
+    )
+```
+
+
+```{r}
+col_pal2 <- c(
+  "#e6194b",    # Red
+  "#3cb44b",    # Green
+  "#911eb4",    # Green
+  "#46f0f0",    # Green
+  "#911eb4",
+  "#911eb4",    # Orange
+  "#911eb4",    # Cyan
+  "#911eb4",
+  "#911eb4",    # Red
+  "#911eb4", 
+  "#911eb4",
+  "#911eb4",
+  "#46f0f0",
+  "#ffe119",
+  "#46f0f0",
+  "#ffe119",
+  "#46f0f0",
+  "#911eb4",    # Orange
+  "#911eb4",    # Cyan
+  "#911eb4",
+  "#911eb4",    # Red
+  "#911eb4", 
+  "#911eb4",
+  "#911eb4",# Pink
+  "#fabebe",    # Pink
+  "#fabebe",    # Pink
+  "#fabebe",    # Pink
+  "#fabebe",    # Pink
+  "#fabebe",    # Yellow
+  "#fabebe",    # Purple
+  "#fabebe",    # Yellow
+  "#ffe119",    # Yellow
+  "#008080",    # Teal
+  "#008080",    # Teal
+  "#008080"    # Teal
+)
+
+col_pal2_up <- c(
+  "#fabebe",    
+  "#fabebe",
+  "#46f0f0",
+  "#46f0f0",    # Green
+  "#46f0f0",
+  "#46f0f0",
+  "#46f0f0",
+  "#46f0f0",
+  "#ffe119",
+  "#46f0f0",
+  "#ffe119",
+  "#46f0f0",
+  "#fabebe",    
+  "#fabebe",    
+  "#fabebe",    
+  "#fabebe",    
+  "#fabebe",    
+  "#ffe119",    
+  "#008080",    
+  "#008080",    
+  "#008080"    
+)
+
+
+station_col2_r <- c(
+  #"#fabebe",
+#  "yellow",
+  "#46f0f0",
+  "#911eb4",
+  "#3cb44b",
+  "#e6194b"
+  
+) 
+
+
+
+station_col2 <- c(
+  "#ff0000", "#dc143c", "#ffc0cb",  # Reds
+  "#ffff00", "#ffd700", "#ffbf00",  # Yellows
+  "#4169e1", "#000080", "#87ceeb",  # Blues
+  "#800000", "#aaffc3", "#808000",  # Additional colors
+  "#ffd8b1", "#000075", "#808080",  # More colors
+  "#ffffff", "#000000",  "#911eb4",
+  "#008080", "#3cb44b", "#800000" ,
+  "#ff0000", "#dc143c", "#ffc0cb",
+   "#ffff00", "#ffd700", "#ffbf00"# White and Black
+) 
+```
+
+```{r}
+ggplot(arctic_ctd2,
+         aes(x = temperature, y = pressure, color = factor(station))) + #salinity
+     geom_path(size = 1) +
+    scale_y_reverse() + #breaks = seq(0, max(arctic_ctd1$pressure), 50)
+  scale_color_manual(values = station_col2) +
+   scale_x_continuous(breaks = c(-2, 0, 2, 4, 6, 8 )) + # temperature
+    theme_bw() +
+    theme(
+      legend.position = "bottom",
+      axis.text = element_text(size = 12),
+      axis.title = element_text(size = 14)
+    ) +
+    labs(
+      x = "Temperature (°C)", #Salinity (PSU)
+      y = "Pressure (dbar)",
+      color = "Location"
+    )
+```
+
+```{r}
+arcctd2<- ggplot(arctic_ctd2,
+         aes(x = oxygen, y = pressure, color = factor(station))) +
+     geom_path(size = 1) +
+    scale_y_reverse() + #max(arctic_ctd2$pressure), 150; breaks = c(0, 500, 600, 700, 800, 900, 1000, 1100, 1200, 1300, 1400, 1500, 1600, 1700, 1800, 1900, 2000, 2100) +
+  coord_cartesian(xlim = c(3.8, 9.2)) +
+  scale_x_continuous(breaks = c(4, 5, 6, 7, 8, 9 )) + #temperature
+  scale_color_manual(values = col_pal2) +
+    theme_bw() +
+    theme(
+      legend.position = "",
+      axis.text = element_text(size = 12),
+      axis.title = element_text(size = 14)
+    ) +
+    labs(
+      x = "Oxygen concentration (ml/l)",
+      y = "Pressure (dbar)",
+      color = "Location"
+    )
+arcctd2
+```
+
+```{r}
+arcctd2_leg <- ggplot(arctic_ctd2,
+         aes(x = temperature, y = pressure, color = factor(location))) +
+     geom_path(size = 1) +
+    scale_y_reverse() + #breaks = seq(0, max(arctic_ctd1$pressure), 50)
+  scale_color_manual(values = station_col2_r) +
+    theme_bw() +
+    theme(
+      legend.position = "bottom",
+      axis.text = element_text(size = 12),
+      axis.title = element_text(size = 14)
+    ) +
+    labs(
+      x = "Temperature (°C)",
+      y = "Pressure (dbar)",
+      color = "Location"
+    )
+arcctd2_leg
+```
+
+```{r}
+#Plotting the data Arctic 2
+Arctic_ctd_plot <- function(mydf, myycol, mycolours, limits_y, ylab, cil, ciu, breaks_y) {
+ggplot(mydf, aes(x = location, y = .data[[myycol]], shape = parasitized)) +
+  geom_jitter( color = mycolours, width = 0.2, height = 0) +
+  scale_shape_manual( values = c(15, 25)) +
+  theme_minimal() +
+    scale_y_continuous(limits = limits_y, breaks = breaks_y)+
+  geom_ribbon(
+    aes(ymin = .data[[cil]], ymax = .data[[ciu]]),
+    alpha = 1,  # Transparency level
+    color = NA    # No border around the ribbon
+  ) +
+  labs(
+    title = "",
+    x = "",
+    y = ylab
+  ) +
+      theme(
+    panel.grid.minor = element_line(colour = "lightgray", linewidth = 0.25),
+    panel.grid.major = element_line(colour = "gray90", linewidth = 0.5),
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    legend.title = element_blank()
+  ) +
+    theme(legend.title = element_text())
+  # +
+  #  geom_text_repel(
+  #  aes(label = station),
+  #  size = 3,
+  #  max.overlaps = Inf,
+  #  point.padding = unit(0.1, "mm"),
+  #  segment.color = "cyan4"
+  #)
+}
+
+salinity_2 <- Arctic_ctd_plot(mydf = arctic_ctd2,
+                    myycol = "mean_salinity",
+                    mycolours = c("cyan4"),
+                    limits_y = c(33, 36),
+                    ylab = "Mean salinity (PSU)",
+                    cil = "ci_lower_sal",
+                    ciu = "ci_upper_sal",
+                    breaks_y = c(33, 34, 35, 36)
+                    ) 
+salinity_2
+```
+
+```{r}
+temperature_2 <- Arctic_ctd_plot(mydf = arctic_ctd2,
+                    myycol = "mean_temperature",
+                    mycolours = c("cyan4"),
+                    limits_y = c(-3, 10),
+                    ylab = "Mean temperature (°C)",
+                    cil = "ci_lower_temp",
+                    ciu = "ci_upper_temp",
+                    breaks_y = c(-2, 0, 2, 4, 6, 8, 10))
+temperature_2
+```
+
+```{r}
+oxygen_2 <- Arctic_ctd_plot(mydf = arctic_ctd2,
+                    myycol = "mean_oxygen",
+                    mycolours = c("cyan4"),
+                    limits_y = c(5, 9),
+                    ylab = "Mean oxygen (ml/l)",
+                    cil = "ci_lower_oxy",
+                    ciu = "ci_upper_oxy",
+                    breaks_y = c(5, 6, 7, 8, 9))
+oxygen_2
+```
+
+```{r}
+lines <- readLines(here::here("data/CTD/Sampling_event_2/Sta0268.cnv"))
+lines
+```
+
+## Survey 3
+
+##### CTD depth profile 
+
+```{r}
+lines <- readLines(here::here("data/CTD/Sampling_event_3/Kongsfjord_1197.cnv"))
+#head(lines, n=100)
+
+ctd_1197 <- (read.ctd.sbe(here::here("data/CTD/Sampling_event_3/Kongsfjord_1197.cnv")))@data
+ctd_1145 <- (read.ctd.sbe(here::here("data/CTD/Sampling_event_3/Rijpfjord_1145.cnv")))@data
+ctd_1132 <- (read.ctd.sbe(here::here("data/CTD/Sampling_event_3/Wijdfjord_1132.cnv")))@data
+
+ctd3 <- function(mydf) 
+  {data.frame(
+  oxygen = mydf$oxygen2,     
+  temperature = mydf$temperature, 
+  salinity = mydf$salinity,
+   pressure = mydf$pressure  
+)
+}
+
+ctd_st1197 <-  ctd3(mydf = ctd_1197)
+ctd_st1145 <-  ctd3(mydf = ctd_1145)
+ctd_st1132 <-  ctd3(mydf = ctd_1132)
+
+Arctic_ctd03<- function(mydf, location_info, station_info, para_info)
+{   mydf|> 
+#  summarise(
+#  mean_temperature = mean(temperature, na.rm = TRUE),
+#    ci_lower_temp = mean(temperature, na.rm = TRUE) - 
+#      qt(0.975, df = n() - 1) * sd(temperature, na.rm = TRUE) / sqrt(n()),
+#    ci_upper_temp = mean(temperature, na.rm = TRUE) +
+#      qt(0.975, df = n() - 1) * sd(temperature, na.rm = TRUE) / sqrt(n()),
+#  mean_oxygen = mean(oxygen, na.rm = TRUE),
+#    ci_lower_oxy = mean(oxygen, na.rm = TRUE) - 
+#      qt(0.975, df = n() - 1) * sd(oxygen, na.rm = TRUE) / sqrt(n()),
+#    ci_upper_oxy = mean(oxygen, na.rm = TRUE) +
+#      qt(0.975, df = n() - 1) * sd(oxygen, na.rm = TRUE) / sqrt(n()),
+#  mean_salinity = mean(salinity, na.rm = TRUE),
+#    ci_lower_sal = mean(salinity, na.rm = TRUE) - 
+#      qt(0.975, df = n() - 1) * sd(salinity, na.rm = TRUE) / sqrt(n()),
+#    ci_upper_sal = mean(salinity, na.rm = TRUE) +
+#      qt(0.975, df = n() - 1) * sd(salinity, na.rm = TRUE) / sqrt(n())
+#  ) |> 
+  mutate(location = location_info, station = station_info, parasitized = para_info, year = "2024", sampling_event = "3")
+}
+
+
+Arctic_ctd3<- rbind(Arctic_ctd03(mydf = ctd_st1197, location_info = "Kongsfjorden", station_info = 1197, para_info = "Yes"), 
+         Arctic_ctd03(mydf = ctd_st1145, location_info = "Rijpfjorden", station_info = 1145, para_info = "Yes"), 
+         Arctic_ctd03(mydf = ctd_st1132, location_info = "Wijdefjorden", station_info = 1132, para_info = "Yes"))
+
+arctic_ctd3<- Arctic_ctd3 |> 
+   mutate(
+    location = factor(location, 
+                   levels = c("Kongsfjorden", "Wijdefjorden", "Rijpfjorden"),
+                      ordered = TRUE)
+    )
+
+
+
+
+```
+
+
+```{r}
+station_col3 <- c(
+  "#3cb44b",    # Green
+  "#911eb4",    # Green
+  "#46f0f0"
+)
+```
+
+```{r}
+arcctd3 <- ggplot(arctic_ctd3,
+         aes(x = oxygen, y = pressure, color = factor(location))) + #salinity
+     geom_path(size = 1) +
+    scale_y_reverse() + #breaks = seq(0, max(arctic_ctd1$pressure), 50)
+  scale_color_manual(values = station_col3) +
+    theme_bw() +
+    theme(
+      legend.position = "bottom",
+      axis.text = element_text(size = 12),
+      axis.title = element_text(size = 14)
+    ) +
+    labs(
+      x = "Oxygen concentration (ml/l)", #Salinity (PSU)
+      y = "Pressure (dbar)",
+      color = "Location"
+    )
+arcctd3
+```
+
+```{r}
+Arctic_ctd_plot3 <- function(mydf, myycol, mycolours, limits_y, ylab, cil, ciu, breaks_y) {
+ggplot(mydf, aes(x = location, y = .data[[myycol]], shape = parasitized, fill = parasitized)) +
+  geom_point( color = "black", width = 0.2, height = 0) +
+  scale_shape_manual( values = c(25)) +
+    scale_fill_manual(values = mycolours) +
+  theme_minimal() +
+  scale_y_continuous(limits = limits_y, breaks = breaks_y)+
+  geom_ribbon(
+    aes(ymin = .data[[cil]], ymax = .data[[ciu]]),
+    alpha = 1,  # Transparency level
+    color = NA    # No border around the ribbon
+  ) +
+  labs(
+    title = "",
+    x = "",
+    y = ylab
+  ) +
+      theme(
+    panel.grid.minor = element_line(colour = "lightgray", linewidth = 0.25),
+    panel.grid.major = element_line(colour = "gray90", linewidth = 0.5),
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    legend.title = element_blank()
+  ) +
+    theme(legend.position = "none")
+  # +
+  #  geom_text_repel(
+  #  aes(label = station),
+  #  size = 3,
+  #  max.overlaps = Inf,
+  #  point.padding = unit(0.1, "mm"),
+  #  segment.color = "cyan4"
+  #)
+}
+salinity_3a <- Arctic_ctd_plot3(mydf = arctic_ctd3,
+                    myycol = "mean_salinity",
+                    mycolours = c("gold"),
+                    limits_y = c(33, 35),
+                    ylab = "Mean salinity (PSU)",
+                    cil = "ci_lower_sal",
+                    ciu = "ci_upper_sal",
+                    breaks_y = c(33, 34, 35)
+                    ) 
+salinity_3a
+```
+
+```{r}
+temperature_3a <- Arctic_ctd_plot3(mydf = arctic_ctd3,
+                    myycol = "mean_temperature",
+                    mycolours = c("gold"),
+                    limits_y = c(-3, 10),
+                    ylab = "Mean temperature (°C)",
+                    cil = "ci_lower_temp",
+                    ciu = "ci_upper_temp",
+                    breaks_y = c(-2, 0, 2, 4, 6, 8, 10))
+temperature_3a
+```
+
+```{r}
+oxygen_3a <- Arctic_ctd_plot3(mydf = arctic_ctd3,
+                    myycol = "mean_oxygen",
+                    mycolours = c("gold"),
+                    limits_y = c(0, 6),
+                    ylab = "Mean oxygen (ml/l)",
+                    cil = "ci_lower_oxy",
+                    ciu = "ci_upper_oxy",
+                    breaks_y = c(0, 2,4, 6))
+oxygen_3a
+```
+
+
+
+## GGsave
+
+```{r}
+ggsave(here("output", "arcctd3_leg.png"), plot = arcctd3, width = 140, height = 140, units = "mm", scale = 1.2)
+```
