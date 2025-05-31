@@ -17,7 +17,9 @@ library(ggrepel)
 here::here()
 ```
 
-#### 1. Kors-&Fanafjord 2023-2024
+#### Survey 4
+
+######## Read in the data
 
 ```{r}
 #Read in excel sheets
@@ -189,7 +191,7 @@ june_2023fa_data <- read_excel(here::here(
        skip = 1 )|> 
   janitor::clean_names() |> 
   filter(depth >= 2)  |>
-     slice(1:which.max(depth >= 148)) |> 
+     slice(1:which.max(depth >= 124)) |> 
    drop_na()
 
 
@@ -359,19 +361,8 @@ aug_2023ko_data <- read_excel(here::here(
 ```{r}
 june_2023fa_oxygen <- read_excel(here::here(
     "data/CTD/Korsfjord_Fanafjord_2023/June_Korsfjord_2023_salinity.xlsx"),
-    n_max = 2557) |> 
-     janitor::clean_names() #|> 
-#slice(-(1:170) ) 
-#  summarise(
-#    dissolved_o2_saturation = mean(salinity, na.rm = TRUE),
-#    ci_lower_oxy = mean(salinity, na.rm = TRUE) - 
-#      qt(0.975, df = n() - 1) * sd(salinity, na.rm = TRUE) / sqrt(n()),
-#    ci_upper_oxy = mean(salinity, na.rm = TRUE) +
- #     qt(0.975, df = n() - 1) * sd(salinity, na.rm = TRUE) / sqrt(n())
-  #)
-  
-#23536
-#slice_tail(june_2023fa_data, n = 1000)
+    n_max = 2544) |> 
+     janitor::clean_names()
 june_2023fa_oxygen
 
 june_2023fa_data_com<- cbind(june_2023fa_oxygen, june_2023fa_data)
@@ -380,30 +371,13 @@ june_2023fa_data_com
 
 ```
 
-#### CTD depth profile
+######### CTD depth profile
 
 ```{r}
 #function for excel sheets
 
 sampling_event_3 <- function(mydf, month_info, fjord_info, year_info, sampling)
 {   mydf|> 
-#  summarise(
-#  mean_temperature = mean(temperature_3, na.rm = TRUE),
-#    ci_lower_temp = mean(temperature_3, na.rm = TRUE) - 
-#      qt(0.975, df = n() - 1) * sd(temperature_3, na.rm = TRUE) / sqrt(n()),
-#    ci_upper_temp = mean(temperature_3, na.rm = TRUE) +
-#      qt(0.975, df = n() - 1) * sd(temperature_3, na.rm = TRUE) / sqrt(n()),
-#  mean_oxygen = mean(dissolved_o2_saturation, na.rm = TRUE),
-#    ci_lower_oxy = mean(dissolved_o2_saturation, na.rm = TRUE) - 
-#      qt(0.975, df = n() - 1) * sd(dissolved_o2_saturation, na.rm = TRUE) / sqrt(n()),
-#    ci_upper_oxy = mean(dissolved_o2_saturation, na.rm = TRUE) +
-#      qt(0.975, df = n() - 1) * sd(dissolved_o2_saturation, na.rm = TRUE) / sqrt(n()),
-#  mean_salinity = mean(salinity, na.rm = TRUE),
-#    ci_lower_sal = mean(salinity, na.rm = TRUE) - 
-#      qt(0.975, df = n() - 1) * sd(salinity, na.rm = TRUE) / sqrt(n()),
-#    ci_upper_sal = mean(salinity, na.rm = TRUE) +
-#      qt(0.975, df = n() - 1) * sd(salinity, na.rm = TRUE) / sqrt(n())
-#  ) |> 
   mutate(month = month_info, location = fjord_info, year = year_info, sampling_trip = sampling) |> 
     group_by(location, month, year, sampling_trip)
 }
@@ -644,13 +618,8 @@ ordered_24 <- function(loca_inf, year_inf) {
                            "July", "August", "September", "October", "November", "December"),
                       ordered = TRUE)
     ) |> 
-  #filter(!is.infinite(depth)) |> 
  drop_na(depth, dissolved_o2_saturation) 
 }
-#|> 
-  #mutate(mean_salinity = as.numeric(mean_salinity, na.rm = TRUE),
-  #       mean_oxygen = as.numeric(mean_oxygen, na.rm = TRUE),
-  #       mean_temperature = as.numeric(mean_temperature, na.rm = TRUE))
 
 korsfjord__24 <- ordered_24(loca_inf = "Korsfjord",
                           year_inf = "2024"
@@ -665,7 +634,6 @@ fanafjord__23 <- ordered_24(loca_inf = "Fanafjord",
                           )
 
 ```
-
 
 ```{r}
 col_pal <- c(
@@ -714,122 +682,7 @@ ctd_plot4_<- plot_no4(mydf = korsfjord__24,    # korsfjord__24, fanafjord__23
 ctd_plot4_
 ```
 
-```{r}
-ggplot(ordered_24,
-         aes(x = salinity, y = depth, color = month)) +
-    geom_path(size = 1) +
-    scale_y_reverse(breaks = seq(0, max(ordered_24$depth), 50)) + #breaks = seq(0, max(ordered_24$depth), 50)
-   scale_colour_manual(values = col_pal) + 
-   theme_bw() +
-    theme(
-      legend.position = "bottom",
-      axis.text = element_text(size = 12),
-      axis.title = element_text(size = 14),
-      # Remove left y-axis
-    axis.line.y = element_blank(),
-    axis.text.y = element_blank(),
-    axis.title.y = element_blank(),
-    # Add right y-axis
-    axis.line.y.right = element_line(color = "black"),
-    axis.text.y.right = element_text(color = "black", size = 12),
-    axis.title.y.right = element_text(color = "black", size = 14)
-  ) +
-    labs(
-      x = expression(Salinity~(PSU)),
-      y = "Pressure (dbar)",
-      color = "Month"
-    )
-```
-
-```{r}
-ggplot(ordered_24,
-         aes(x = dissolved_o2_saturation, y = depth, color = month)) +
-    geom_path(size = 1) +
-    scale_y_reverse(breaks = seq(0, max(ordered_24$depth), 50)) + #breaks = seq(0, max(ordered_24$depth), 50)
-    scale_colour_manual(values = col_pal) +
-  theme_bw() +
-      theme(
-      legend.position = "bottom",
-      axis.text = element_text(size = 12),
-      axis.title = element_text(size = 14),
-      # Remove left y-axis
-    axis.line.y = element_blank(),
-    axis.text.y = element_blank(),
-    axis.title.y = element_blank(),
-    # Add right y-axis
-    axis.line.y.right = element_line(color = "black"),
-    axis.text.y.right = element_text(color = "black", size = 12),
-    axis.title.y.right = element_text(color = "black", size = 14)
-  )  +
-    labs(
-      x = "Oxygen (%)",
-      y = "Pressure (dbar)",
-      color = "Month"
-    )
-```
-
-```{r}
-ctd_3 <- function(mydf, myycol, mycolours, limits_y, ylab, ciu, cil) {
-ggplot(mydf, aes(x = month, y = .data[[myycol]], colour = sampling_trip, shape = sampling_trip)) +
-  geom_point() +
-   geom_line(aes(group = sampling_trip)) +
-  scale_color_manual(values = mycolours) +
-  scale_shape_manual(values = c(15, 16, 17)) +
-  theme_minimal() +
-  geom_ribbon(
-    aes(ymin = .data[[cil]], ymax = .data[[ciu]]),
-    alpha = 1,  # Transparency level
-    color = NA    # No border around the ribbon
-  ) +
-  labs(
-    title = "",
-    x = "",
-    y = ylab
-  ) +
-    scale_y_continuous(limits = limits_y)+
-    theme(
-    panel.grid.minor = element_line(colour = "lightgray", linewidth = 0.25),
-    panel.grid.major = element_line(colour = "gray90", linewidth = 0.5),
-    axis.text.x = element_text(angle = 45, hjust = 1),
-    legend.title = element_blank(),
-    legend.position = "bottom"
-  ) 
-}
-
-salinity_3 <- ctd_3(mydf = ordered_24,
-                    myycol = "mean_salinity",
-                    mycolours = c("deeppink4", "green3", "deeppink"),
-                    limits_y = c(20, 40),
-                    ylab = "Mean salinity (PSU)",
-                    cil = "ci_lower_sal",
-                    ciu = "ci_upper_sal") 
-salinity_3
-
-```
-
-```{r}
-temperature_3 <- ctd_3(mydf = ordered_24,
-                    myycol = "mean_temperature",
-                    mycolours = c("deeppink4", "green3", "deeppink"),
-                    limits_y = c(5, 15),
-                    ylab = "Mean temperature (°C)",
-                    cil = "ci_lower_temp",
-                    ciu = "ci_upper_temp")
-temperature_3
-```
-
-```{r}
-oxygen_3 <- ctd_3(mydf = ordered_24,
-                    myycol = "mean_oxygen",
-                    mycolours = c("deeppink4", "green3", "deeppink"),
-                    limits_y = c(0, 150),
-                    ylab = "Dissolved oxygen saturation (%)",
-                    cil = "ci_lower_oxy",
-                    ciu = "ci_upper_oxy")
-oxygen_3
-```
-
-### mean values 
+### mean values
 
 ```{r}
 sampling_event_3 <- function(mydf, month_info, fjord_info, year_info, sampling)
@@ -1092,7 +945,6 @@ ordered_24_mean <- function(loca_inf, year_inf) {
                            "July", "August", "September", "October", "November", "December"),
                       ordered = TRUE)
     ) |> 
-  #filter(!is.infinite(depth)) |> 
  filter(mean_oxygen > 0) |> # to filter May oxygen out
   mutate(mean_salinity = as.numeric(mean_salinity, na.rm = TRUE),
          mean_oxygen = as.numeric(mean_oxygen, na.rm = TRUE),
@@ -1112,7 +964,6 @@ fanafjord__23_mean <- ordered_24_mean(loca_inf = "Fanafjord",
                           )
 
 ```
-
 
 ## 2. Arctic CTD
 
@@ -1179,7 +1030,7 @@ ctd <- function(mydf)
 }
 
 ctd_sta1 <-  ctd(mydf = ctd_st1)
-ctd_stat2 <-  ctd(mydf = ctd_st2)
+ctd_sta2 <-  ctd(mydf = ctd_st2)
 ctd_sta3 <-  ctd(mydf = ctd_st3)
 ctd_sta5 <-  ctd(mydf = ctd_st5)
 ctd_sta7 <-  ctd(mydf = ctd_st7)
@@ -1213,29 +1064,11 @@ ctd_sta31 <- ctd(mydf = ctd_st31)
 # Because measurements after 310 are not to be trusted (vvery high variation in between measurements)
 
 
-#  slice_tail(n = 5)
 ```
 
 ```{r}
 Arctic_ctd<- function(mydf, location_info, para_info, station_info)
 {   mydf|> 
- # summarise(
-#  mean_temperature = mean(temperature, na.rm = TRUE),
-#    ci_lower_temp = mean(temperature, na.rm = TRUE) - 
-#      qt(0.975, df = n() - 1) * sd(temperature, na.rm = TRUE) / sqrt(n()),
-#    ci_upper_temp = mean(temperature, na.rm = TRUE) +
-#      qt(0.975, df = n() - 1) * sd(temperature, na.rm = TRUE) / sqrt(n()),
-#  mean_oxygen = mean(oxygen, na.rm = TRUE),
-#    ci_lower_oxy = mean(oxygen, na.rm = TRUE) - 
-#      qt(0.975, df = n() - 1) * sd(oxygen, na.rm = TRUE) / sqrt(n()),
-#    ci_upper_oxy = mean(oxygen, na.rm = TRUE) +
-#      qt(0.975, df = n() - 1) * sd(oxygen, na.rm = TRUE) / sqrt(n()),
-#  mean_salinity = mean(salinity, na.rm = TRUE),
-#    ci_lower_sal = mean(salinity, na.rm = TRUE) - 
-#      qt(0.975, df = n() - 1) * sd(salinity, na.rm = TRUE) / sqrt(n()),
-#    ci_upper_sal = mean(salinity, na.rm = TRUE) +
-#      qt(0.975, df = n() - 1) * sd(salinity, na.rm = TRUE) / sqrt(n())
-#  ) |> 
   mutate(location = location_info, parasitized = para_info, station = station_info, year = "2022", sampling_event = "1") |> 
     group_by(location, parasitized)
 }
@@ -1263,17 +1096,9 @@ Arctic_ctd1<- rbind(Arctic_ctd(mydf = ctd_sta1, location_info = "Krossfjorden", 
          Arctic_ctd(mydf = ctd_sta31, location_info = "Bleik Canyon", para_info = "Yes", station_info = "31")
 )
 arctic_ctd1<- Arctic_ctd1 |> 
- #  filter(location == "Hornsund") |> 
   drop_na(temperature)
-  # mutate(
-  #  location = factor(location, 
-  #                 levels = c("Krossfjorden", "Kongsfjorden", "Billefjorden","Van Mijenfjorden","Hornsund", 
-  #                            "Barents Sea", "Porsangerfjorden", "Bleik Canyon"),
-  #                    ordered = TRUE) |> 
-     
-    #)
-```
 
+```
 
 ```{r}
 col_pal1 <- c(
@@ -1351,92 +1176,6 @@ arcctd1<- ggplot(arctic_ctd1,
     )
 arcctd1
 
-```
-
-```{r}
-## Only for Legend
-arcctd1_leg<- ggplot(arctic_ctd1,
-         aes(x = oxygen, y = pressure, color = location)) +
-     geom_path(size = 1) +
-    scale_y_reverse(breaks = seq(0, max(arctic_ctd1$pressure), 50)) +
-  scale_color_manual(values = c( "#46f0f0","#008080","#ffe119","#f58231","#911eb4","#e6194b","#fabebe","#3cb44b")) +
-    theme_bw() +
-    theme(
-      legend.position = "bottom",
-      axis.text = element_text(size = 12),
-      axis.title = element_text(size = 14)
-    ) +
-    labs(
-      x = "Oxygen concentration (ml/l)",
-      y = "Pressure (dbar)",
-      color = "Location"
-    )
-arcctd1_leg
-
-```
-
-```{r}
-#Plotting the data Arctic 1
-
-Arctic_ctd_plot<- function(mydf, myycol, mycolours, limits_y, ylab, cil, ciu, breaks_y) {
-ggplot(mydf, aes(x = location, y = .data[[myycol]], shape = parasitized)) +
-  geom_jitter( color = mycolours, width = 0.2, height = 0) +
-  scale_shape_manual( values = c(15, 25)) +
-  theme_minimal() +
-    scale_y_continuous(limits = limits_y, breaks = breaks_y)+
-  geom_ribbon(
-    aes(ymin = .data[[cil]], ymax = .data[[ciu]]),
-    alpha = 1,  # Transparency level
-    color = NA    # No border around the ribbon
-  ) +
-  labs(
-    title = "",
-    x = "",
-    y = ylab
-  ) +
-      theme(
-    panel.grid.minor = element_line(colour = "lightgray", linewidth = 0.25),
-    panel.grid.major = element_line(colour = "gray90", linewidth = 0.5),
-    axis.text.x = element_text(angle = 45, hjust = 1),
-    legend.title = element_blank()
-    
-  ) +
-    theme(legend.title = element_text())
-}
-
-salinity_1 <- Arctic_ctd_plot(mydf = arctic_ctd1,
-                    myycol = "mean_salinity",
-                    mycolours = c("orange2"),
-                    limits_y = c(32, 36),
-                    ylab = "Mean salinity (PSU)",
-                    cil = "ci_lower_sal",
-                    ciu = "ci_upper_sal",
-                     breaks_y = c(33, 34, 35, 36)) 
-salinity_1
-```
-
-```{r}
-temperature_1 <- Arctic_ctd_plot(mydf = arctic_ctd1,
-                    myycol = "mean_temperature",
-                    mycolours = c("orange2"),
-                    limits_y = c(-2, 12),
-                    ylab = "Mean temperature (°C)",
-                    cil = "ci_lower_temp",
-                    ciu = "ci_upper_temp",
-                    breaks_y = c(-2, 5, 10))
-temperature_1
-```
-
-```{r}
-oxygen_1 <- Arctic_ctd_plot(mydf = arctic_ctd1,
-                    myycol = "mean_oxygen",
-                    mycolours = c("orange2"),
-                    limits_y = c(5, 9),
-                    ylab = "Mean oxygen (ml/l)",
-                    cil = "ci_lower_oxy",
-                    ciu = "ci_upper_oxy",
-                     breaks_y = c(5, 6, 7, 8, 9))
-oxygen_1
 ```
 
 ## Survey 2
@@ -1536,23 +1275,6 @@ ctd_sta307 <- ctd_stat307|>
 ```{r}
 Arctic_ctd<- function(mydf, location_info, station_info, para_info)
 {   mydf|> 
- # summarise(
-#  mean_temperature = mean(temperature, na.rm = TRUE),
-#    ci_lower_temp = mean(temperature, na.rm = TRUE) - 
-#      qt(0.975, df = n() - 1) * sd(temperature, na.rm = TRUE) / sqrt(n()),
-#    ci_upper_temp = mean(temperature, na.rm = TRUE) +
- #     qt(0.975, df = n() - 1) * sd(temperature, na.rm = TRUE) / sqrt(n()),
-#  mean_oxygen = mean(oxygen, na.rm = TRUE),
-#    ci_lower_oxy = mean(oxygen, na.rm = TRUE) - 
-#      qt(0.975, df = n() - 1) * sd(oxygen, na.rm = TRUE) / sqrt(n()),
-#    ci_upper_oxy = mean(oxygen, na.rm = TRUE) +
-#      qt(0.975, df = n() - 1) * sd(oxygen, na.rm = TRUE) / sqrt(n()),
-#  mean_salinity = mean(salinity, na.rm = TRUE),
-#    ci_lower_sal = mean(salinity, na.rm = TRUE) - 
-#      qt(0.975, df = n() - 1) * sd(salinity, na.rm = TRUE) / sqrt(n()),
-#    ci_upper_sal = mean(salinity, na.rm = TRUE) +
-#      qt(0.975, df = n() - 1) * sd(salinity, na.rm = TRUE) / sqrt(n())
-#  ) |> 
   mutate(location = location_info, station = station_info, parasitized = para_info, year = "2023", sampling_event = "2")
 }
 
@@ -1585,7 +1307,6 @@ Arctic_ctd2<- rbind(Arctic_ctd(mydf = ctd_sta268, location_info = "Prins Karls F
 )
 arctic_ctd2<- Arctic_ctd2 |> 
    mutate(station = as.character(station)) |> 
-  #filter(location != "North of Spitsbergen" ) |> 
   filter(parasitized == "Yes") |> 
    mutate(
     location = factor(location, 
@@ -1595,7 +1316,6 @@ arctic_ctd2<- Arctic_ctd2 |>
       
     )
 ```
-
 
 ```{r}
 col_pal2 <- c(
@@ -1728,109 +1448,10 @@ arcctd2<- ggplot(arctic_ctd2,
 arcctd2
 ```
 
-```{r}
-arcctd2_leg <- ggplot(arctic_ctd2,
-         aes(x = temperature, y = pressure, color = factor(location))) +
-     geom_path(size = 1) +
-    scale_y_reverse() + #breaks = seq(0, max(arctic_ctd1$pressure), 50)
-  scale_color_manual(values = station_col2_r) +
-    theme_bw() +
-    theme(
-      legend.position = "bottom",
-      axis.text = element_text(size = 12),
-      axis.title = element_text(size = 14)
-    ) +
-    labs(
-      x = "Temperature (°C)",
-      y = "Pressure (dbar)",
-      color = "Location"
-    )
-arcctd2_leg
-```
-
-```{r}
-#Plotting the data Arctic 2
-Arctic_ctd_plot <- function(mydf, myycol, mycolours, limits_y, ylab, cil, ciu, breaks_y) {
-ggplot(mydf, aes(x = location, y = .data[[myycol]], shape = parasitized)) +
-  geom_jitter( color = mycolours, width = 0.2, height = 0) +
-  scale_shape_manual( values = c(15, 25)) +
-  theme_minimal() +
-    scale_y_continuous(limits = limits_y, breaks = breaks_y)+
-  geom_ribbon(
-    aes(ymin = .data[[cil]], ymax = .data[[ciu]]),
-    alpha = 1,  # Transparency level
-    color = NA    # No border around the ribbon
-  ) +
-  labs(
-    title = "",
-    x = "",
-    y = ylab
-  ) +
-      theme(
-    panel.grid.minor = element_line(colour = "lightgray", linewidth = 0.25),
-    panel.grid.major = element_line(colour = "gray90", linewidth = 0.5),
-    axis.text.x = element_text(angle = 45, hjust = 1),
-    legend.title = element_blank()
-  ) +
-    theme(legend.title = element_text())
-  # +
-  #  geom_text_repel(
-  #  aes(label = station),
-  #  size = 3,
-  #  max.overlaps = Inf,
-  #  point.padding = unit(0.1, "mm"),
-  #  segment.color = "cyan4"
-  #)
-}
-
-salinity_2 <- Arctic_ctd_plot(mydf = arctic_ctd2,
-                    myycol = "mean_salinity",
-                    mycolours = c("cyan4"),
-                    limits_y = c(33, 36),
-                    ylab = "Mean salinity (PSU)",
-                    cil = "ci_lower_sal",
-                    ciu = "ci_upper_sal",
-                    breaks_y = c(33, 34, 35, 36)
-                    ) 
-salinity_2
-```
-
-```{r}
-temperature_2 <- Arctic_ctd_plot(mydf = arctic_ctd2,
-                    myycol = "mean_temperature",
-                    mycolours = c("cyan4"),
-                    limits_y = c(-3, 10),
-                    ylab = "Mean temperature (°C)",
-                    cil = "ci_lower_temp",
-                    ciu = "ci_upper_temp",
-                    breaks_y = c(-2, 0, 2, 4, 6, 8, 10))
-temperature_2
-```
-
-```{r}
-oxygen_2 <- Arctic_ctd_plot(mydf = arctic_ctd2,
-                    myycol = "mean_oxygen",
-                    mycolours = c("cyan4"),
-                    limits_y = c(5, 9),
-                    ylab = "Mean oxygen (ml/l)",
-                    cil = "ci_lower_oxy",
-                    ciu = "ci_upper_oxy",
-                    breaks_y = c(5, 6, 7, 8, 9))
-oxygen_2
-```
-
-```{r}
-lines <- readLines(here::here("data/CTD/Sampling_event_2/Sta0268.cnv"))
-lines
-```
-
 ## Survey 3
-
-##### CTD depth profile 
 
 ```{r}
 lines <- readLines(here::here("data/CTD/Sampling_event_3/Kongsfjord_1197.cnv"))
-#head(lines, n=100)
 
 ctd_1197 <- (read.ctd.sbe(here::here("data/CTD/Sampling_event_3/Kongsfjord_1197.cnv")))@data
 ctd_1145 <- (read.ctd.sbe(here::here("data/CTD/Sampling_event_3/Rijpfjord_1145.cnv")))@data
@@ -1851,23 +1472,6 @@ ctd_st1132 <-  ctd3(mydf = ctd_1132)
 
 Arctic_ctd03<- function(mydf, location_info, station_info, para_info)
 {   mydf|> 
-#  summarise(
-#  mean_temperature = mean(temperature, na.rm = TRUE),
-#    ci_lower_temp = mean(temperature, na.rm = TRUE) - 
-#      qt(0.975, df = n() - 1) * sd(temperature, na.rm = TRUE) / sqrt(n()),
-#    ci_upper_temp = mean(temperature, na.rm = TRUE) +
-#      qt(0.975, df = n() - 1) * sd(temperature, na.rm = TRUE) / sqrt(n()),
-#  mean_oxygen = mean(oxygen, na.rm = TRUE),
-#    ci_lower_oxy = mean(oxygen, na.rm = TRUE) - 
-#      qt(0.975, df = n() - 1) * sd(oxygen, na.rm = TRUE) / sqrt(n()),
-#    ci_upper_oxy = mean(oxygen, na.rm = TRUE) +
-#      qt(0.975, df = n() - 1) * sd(oxygen, na.rm = TRUE) / sqrt(n()),
-#  mean_salinity = mean(salinity, na.rm = TRUE),
-#    ci_lower_sal = mean(salinity, na.rm = TRUE) - 
-#      qt(0.975, df = n() - 1) * sd(salinity, na.rm = TRUE) / sqrt(n()),
-#    ci_upper_sal = mean(salinity, na.rm = TRUE) +
-#      qt(0.975, df = n() - 1) * sd(salinity, na.rm = TRUE) / sqrt(n())
-#  ) |> 
   mutate(location = location_info, station = station_info, parasitized = para_info, year = "2024", sampling_event = "3")
 }
 
@@ -1888,11 +1492,10 @@ arctic_ctd3<- Arctic_ctd3 |>
 
 ```
 
-
 ```{r}
 station_col3 <- c(
-  "#3cb44b",    # Green
-  "#911eb4",    # Green
+  "#3cb44b",  
+  "#911eb4",    
   "#46f0f0"
 )
 ```
@@ -1917,80 +1520,8 @@ arcctd3 <- ggplot(arctic_ctd3,
 arcctd3
 ```
 
-```{r}
-Arctic_ctd_plot3 <- function(mydf, myycol, mycolours, limits_y, ylab, cil, ciu, breaks_y) {
-ggplot(mydf, aes(x = location, y = .data[[myycol]], shape = parasitized, fill = parasitized)) +
-  geom_point( color = "black", width = 0.2, height = 0) +
-  scale_shape_manual( values = c(25)) +
-    scale_fill_manual(values = mycolours) +
-  theme_minimal() +
-  scale_y_continuous(limits = limits_y, breaks = breaks_y)+
-  geom_ribbon(
-    aes(ymin = .data[[cil]], ymax = .data[[ciu]]),
-    alpha = 1,  # Transparency level
-    color = NA    # No border around the ribbon
-  ) +
-  labs(
-    title = "",
-    x = "",
-    y = ylab
-  ) +
-      theme(
-    panel.grid.minor = element_line(colour = "lightgray", linewidth = 0.25),
-    panel.grid.major = element_line(colour = "gray90", linewidth = 0.5),
-    axis.text.x = element_text(angle = 45, hjust = 1),
-    legend.title = element_blank()
-  ) +
-    theme(legend.position = "none")
-  # +
-  #  geom_text_repel(
-  #  aes(label = station),
-  #  size = 3,
-  #  max.overlaps = Inf,
-  #  point.padding = unit(0.1, "mm"),
-  #  segment.color = "cyan4"
-  #)
-}
-salinity_3a <- Arctic_ctd_plot3(mydf = arctic_ctd3,
-                    myycol = "mean_salinity",
-                    mycolours = c("gold"),
-                    limits_y = c(33, 35),
-                    ylab = "Mean salinity (PSU)",
-                    cil = "ci_lower_sal",
-                    ciu = "ci_upper_sal",
-                    breaks_y = c(33, 34, 35)
-                    ) 
-salinity_3a
-```
-
-```{r}
-temperature_3a <- Arctic_ctd_plot3(mydf = arctic_ctd3,
-                    myycol = "mean_temperature",
-                    mycolours = c("gold"),
-                    limits_y = c(-3, 10),
-                    ylab = "Mean temperature (°C)",
-                    cil = "ci_lower_temp",
-                    ciu = "ci_upper_temp",
-                    breaks_y = c(-2, 0, 2, 4, 6, 8, 10))
-temperature_3a
-```
-
-```{r}
-oxygen_3a <- Arctic_ctd_plot3(mydf = arctic_ctd3,
-                    myycol = "mean_oxygen",
-                    mycolours = c("gold"),
-                    limits_y = c(0, 6),
-                    ylab = "Mean oxygen (ml/l)",
-                    cil = "ci_lower_oxy",
-                    ciu = "ci_upper_oxy",
-                    breaks_y = c(0, 2,4, 6))
-oxygen_3a
-```
-
-
-
 ## GGsave
 
 ```{r}
-ggsave(here("output", "arcctd3_leg.png"), plot = arcctd3, width = 140, height = 140, units = "mm", scale = 1.2)
+ggsave(here("output", "plot_name.png"), plot = plot_name, width = 140, height = 140, units = "mm", scale = 1.2)
 ```
